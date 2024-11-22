@@ -36,7 +36,7 @@ class Gui():
         self.snakeIcon = self.canvas.create_line(
             (0, 0), (0, 0), fill=ICON_COLOUR, width=SNAKE_ICON_WIDTH)
         self.preyIcon = self.canvas.create_rectangle(
-            0, 0, 0, 0, fill=ICON_COLOUR, outline=ICON_COLOUR)
+            0, 0, 0, 0, fill=ICON_COLOUR, outline=ICON_COLOUR, width=PREY_ICON_WIDTH)
         #display starting score of 0
         self.score = self.canvas.create_text(
             scoreTextXLocation, scoreTextYLocation, fill=textColour,
@@ -208,6 +208,7 @@ if __name__ == "__main__":
     WINDOW_HEIGHT = 300
     SNAKE_ICON_WIDTH = 15
     #add the specified constant PREY_ICON_WIDTH here
+    PREY_ICON_WIDTH = 5
 
     BACKGROUND_COLOUR = "green"   #you may change this colour if you wish
     ICON_COLOUR = "yellow"        #you may change this colour if you wish
