@@ -1,4 +1,4 @@
-# Group#:
+# Group#: G6
 # Student Names: Muntakim Rahman, Tomaz Zlindra
 
 """
