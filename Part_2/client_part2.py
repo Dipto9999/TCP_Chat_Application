@@ -60,10 +60,9 @@ class ChatClient:
         )
 
         rcv_thread.start()
+        # self.exit()
 
-        self.window.mainloop()
-        self.exit()
-
+    #ToDo -> Implement Exit
     def exit(self):
         self.clientSocket.close() # Close Socket After Tkinter Window Closed.
 
@@ -93,8 +92,9 @@ class ChatClient:
 
 def main(): #Note that the main function is outside the ChatClient class
     window = Tk()
-    window.geometry("650x400")
+    # window.geometry("650x400")
     client = ChatClient(window)
+    window.mainloop()
     #May add more or modify, if needed
 
 if __name__ == '__main__': # May be used ONLY for debugging

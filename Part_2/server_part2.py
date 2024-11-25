@@ -59,9 +59,9 @@ class ChatServer:
             daemon = True # Kill Thread When Spawning Thread (i.e. Main Thread) Exits
         )
         self.handshake_thread.start()
-        self.window.mainloop()
-        self.exit()
+        # self.exit()
 
+    #ToDo -> Implement Exit
     def exit(self):
         for clientSocket in self.clientSockets:
             try:
@@ -113,8 +113,9 @@ class ChatServer:
 
 def main(): #Note that the main function is outside the ChatServer class
     window = Tk()
-    window.geometry("400x400")
+    # window.geometry("400x400")
     server = ChatServer(window)
+    window.mainloop()
     #May add more or modify, if needed
 
 if __name__ == '__main__': # May be used ONLY for debugging
