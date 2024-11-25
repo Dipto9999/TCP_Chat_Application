@@ -158,11 +158,13 @@ class Game():
             The snake coordinates list (representing its length
             and position) should be correctly updated.
         """
+        CAPTURE_THRESHOLD = 0 # ToDo -> Determine if Permissible, Needed
         NewSnakeCoordinates = self.calculateNewCoordinates()
         #complete the method implementation below
 
-        x_captured: bool = (NewSnakeCoordinates[0] >= self.preyCoordinates[0][0]) and (NewSnakeCoordinates[0] <= self.preyCoordinates[-1][0])
-        y_captured: bool = (NewSnakeCoordinates[1] >= self.preyCoordinates[0][1]) and (NewSnakeCoordinates[1] <= self.preyCoordinates[-1][1])
+        #ToDo -> Access Prey Coordinates with GUI
+        x_captured: bool = (NewSnakeCoordinates[0] >= self.preyCoordinates[0][0]-CAPTURE_THRESHOLD) and (NewSnakeCoordinates[0] <= self.preyCoordinates[-1][0]+CAPTURE_THRESHOLD)
+        y_captured: bool = (NewSnakeCoordinates[1] >= self.preyCoordinates[0][1]-CAPTURE_THRESHOLD) and (NewSnakeCoordinates[1] <= self.preyCoordinates[-1][1]+CAPTURE_THRESHOLD)
         if x_captured and y_captured:
             self.score += 1
             self.snakeCoordinates = [*self.snakeCoordinates, NewSnakeCoordinates] # Append New Snake Head
@@ -173,15 +175,15 @@ class Game():
             #     args = ({"score" : self.score}, ),
             #     daemon = True # Kill Thread When Spawning Thread Exits
             # )
-            gameQueue.put_nowait({"score" : self.score})
             # prey_thread = threading.Thread(
             #     target = self.createNewPrey,
             #     daemon = True # Kill Thread When Spawning Thread Exits
             # )
-            self.createNewPrey()
-
             # score_thread.start()
             # prey_thread.start()
+
+            gameQueue.put_nowait({"score" : self.score})
+            self.createNewPrey()
         else:
             self.snakeCoordinates = [*self.snakeCoordinates[1:], NewSnakeCoordinates] # Move Snake
         # lost_thread = threading.Thread(
@@ -250,10 +252,11 @@ class Game():
             To make playing the game easier, set the x and y to be THRESHOLD
             away from the walls.
         """
-        THRESHOLD = 30   #sets how close prey can be to borders
+        THRESHOLD = 2 * PREY_ICON_WIDTH   #sets how close prey can be to borders
         #complete the method implementation below
 
-        #ToDo -> Generate Prey Outside of Snake Coordinates
+        #ToDo -> Generate Prey Outside of Snake Coordinates.
+        #ToDo -> Determine Prey Capture Logic (If Snake Width > Prey Width, If Prey Width > Snake Width).
         preyCoordinates: list[tuple] = [(random.randint(THRESHOLD, WINDOW_WIDTH-THRESHOLD), random.randint(THRESHOLD, WINDOW_HEIGHT-THRESHOLD))] # Generated Coordinates
         preyCoordinates.append((preyCoordinates[0][0] + PREY_ICON_WIDTH, preyCoordinates[0][1] + PREY_ICON_WIDTH)) # Snake Coordinates
 
@@ -266,7 +269,7 @@ if __name__ == "__main__":
     WINDOW_WIDTH = 500
     WINDOW_HEIGHT = 300
     SNAKE_ICON_WIDTH = 15
-    PREY_ICON_WIDTH = 15
+    PREY_ICON_WIDTH = 10
     #add the specified constant PREY_ICON_WIDTH here
 
     BACKGROUND_COLOUR = "black"   #you may change this colour if you wish
