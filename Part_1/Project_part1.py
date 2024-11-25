@@ -101,7 +101,6 @@ class Game():
            This initializer sets the initial snake coordinate list, movement
            direction, and arranges for the first prey to be created.
         """
-        self.wrt = threading.Lock()
         self.queue = gameQueue
         self.score = 0
         #starting length and location of the snake
@@ -253,9 +252,7 @@ class Game():
 
         gameQueue.put_nowait({"prey" : preyCoordinates})
 
-        self.wrt.acquire() # Critical Section (Start)
         self.preyCoordinates = preyCoordinates
-        self.wrt.release() # Critical Section (End)
 
 if __name__ == "__main__":
     #some constants for our GUI
