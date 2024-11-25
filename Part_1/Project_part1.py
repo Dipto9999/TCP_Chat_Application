@@ -167,32 +167,37 @@ class Game():
             self.score += 1
             self.snakeCoordinates = [*self.snakeCoordinates, NewSnakeCoordinates] # Append New Snake Head
 
-            score_thread = threading.Thread(
-                target = gameQueue.put_nowait,
-                args = ({"score" : self.score}, ),
-                daemon = True # Kill Thread When Spawning Thread Exits
-            )
-            prey_thread = threading.Thread(
-                target = self.createNewPrey,
-                daemon = True # Kill Thread When Spawning Thread Exits
-            )
+            #ToDo -> No Threading in Part 1
+            # score_thread = threading.Thread(
+            #     target = gameQueue.put_nowait,
+            #     args = ({"score" : self.score}, ),
+            #     daemon = True # Kill Thread When Spawning Thread Exits
+            # )
+            gameQueue.put_nowait({"score" : self.score})
+            # prey_thread = threading.Thread(
+            #     target = self.createNewPrey,
+            #     daemon = True # Kill Thread When Spawning Thread Exits
+            # )
+            self.createNewPrey()
 
-            score_thread.start()
-            prey_thread.start()
+            # score_thread.start()
+            # prey_thread.start()
         else:
             self.snakeCoordinates = [*self.snakeCoordinates[1:], NewSnakeCoordinates] # Move Snake
-        lost_thread = threading.Thread(
-            target = self.isGameOver,
-            args = (NewSnakeCoordinates, ),
-            daemon = True # Kill Thread When Spawning Thread Exits
-        )
-        move_thread = threading.Thread(
-            target = gameQueue.put_nowait,
-            args = ({"move" :  self.snakeCoordinates}, ),
-            daemon = True # Kill Thread When Spawning Thread Exits
-        )
-        lost_thread.start()
-        move_thread.start()
+        # lost_thread = threading.Thread(
+        #     target = self.isGameOver,
+        #     args = (NewSnakeCoordinates, ),
+        #     daemon = True # Kill Thread When Spawning Thread Exits
+        # )
+        # move_thread = threading.Thread(
+        #     target = gameQueue.put_nowait,
+        #     args = ({"move" :  self.snakeCoordinates}, ),
+        #     daemon = True # Kill Thread When Spawning Thread Exits
+        # )
+        # lost_thread.start()
+        # move_thread.start()
+        self.isGameOver(NewSnakeCoordinates)
+        gameQueue.put_nowait({"move" :  self.snakeCoordinates})
 
     def calculateNewCoordinates(self) -> tuple:
         """
@@ -245,10 +250,12 @@ class Game():
             To make playing the game easier, set the x and y to be THRESHOLD
             away from the walls.
         """
-        THRESHOLD = 15   #sets how close prey can be to borders
+        THRESHOLD = 30   #sets how close prey can be to borders
+        #complete the method implementation below
 
+        #ToDo -> Generate Prey Outside of Snake Coordinates
         preyCoordinates: list[tuple] = [(random.randint(THRESHOLD, WINDOW_WIDTH-THRESHOLD), random.randint(THRESHOLD, WINDOW_HEIGHT-THRESHOLD))] # Generated Coordinates
-        preyCoordinates.append((preyCoordinates[0][0] + SNAKE_ICON_WIDTH, preyCoordinates[0][1] + SNAKE_ICON_WIDTH)) # Snake Coordinates
+        preyCoordinates.append((preyCoordinates[0][0] + PREY_ICON_WIDTH, preyCoordinates[0][1] + PREY_ICON_WIDTH)) # Snake Coordinates
 
         gameQueue.put_nowait({"prey" : preyCoordinates})
 
@@ -259,7 +266,7 @@ if __name__ == "__main__":
     WINDOW_WIDTH = 500
     WINDOW_HEIGHT = 300
     SNAKE_ICON_WIDTH = 15
-    PREY_ICON_WIDTH = 10
+    PREY_ICON_WIDTH = 15
     #add the specified constant PREY_ICON_WIDTH here
 
     BACKGROUND_COLOUR = "black"   #you may change this colour if you wish
