@@ -93,8 +93,6 @@ class QueueHandler():
                 self.queue.task_done()
         except queue.Empty:
             gui.root.after(100, self.queueHandler)
-
-
 class Game():
     '''
         This class implements most of the game functionalities.
@@ -127,7 +125,8 @@ class Game():
         SPEED = 0.15     #speed of snake updates (sec)
         while self.gameNotOver:
             #complete the method implementation below
-            pass #remove this line from your implementation
+            time.sleep(10) # ToDo -> Comment Out and Replace with Capture, Score Increment Logic in Final Submission
+            self.createNewPrey()
 
     def whenAnArrowKeyIsPressed(self, e) -> None:
         """
@@ -199,14 +198,17 @@ class Game():
             away from the walls.
         """
         THRESHOLD = 15   #sets how close prey can be to borders
-        #complete the method implementation below
 
+        prey_coords: list[tuple] = [(random.randint(THRESHOLD, WINDOW_WIDTH-THRESHOLD), random.randint(THRESHOLD, WINDOW_HEIGHT-THRESHOLD))] # Generated Coordinates
+        prey_coords.append((prey_coords[0][0] + SNAKE_ICON_WIDTH, prey_coords[0][1] + SNAKE_ICON_WIDTH)) # Snake Coordinates
+        gameQueue.put_nowait({"prey" : prey_coords})
 
 if __name__ == "__main__":
     #some constants for our GUI
     WINDOW_WIDTH = 500
     WINDOW_HEIGHT = 300
     SNAKE_ICON_WIDTH = 15
+    PREY_ICON_WIDTH = 5
     #add the specified constant PREY_ICON_WIDTH here
 
     BACKGROUND_COLOUR = "green"   #you may change this colour if you wish
