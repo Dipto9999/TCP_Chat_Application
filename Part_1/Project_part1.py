@@ -108,7 +108,6 @@ class Game():
         # (x, y) tuple. Initially its size is 5 tuples.
         self.snakeCoordinates = [(495, 55), (485, 55), (475, 55),
                                  (465, 55), (455, 55)]
-        self.preyCoordinates = [(0, 0)]
         #initial direction of the snake
         self.direction = "Left"
         self.gameNotOver = True
@@ -158,18 +157,35 @@ class Game():
             The snake coordinates list (representing its length
             and position) should be correctly updated.
         """
-        CAPTURE_THRESHOLD = 0 # ToDo -> Determine if Permissible, Needed
+        #TODO -> Determine Prey Capture Logic (If Snake Width > Prey Width, If Prey Width > Snake Width).
+        def isCaptured(snakeCoordinates, preyCoordinates) -> bool:
+            effectiveSnakeCoordinates: list[tuple] = []
+            x_captured, y_captured = False, False
+            if self.direction in ("Left", "Right"):
+                effectiveSnakeCoordinates = [
+                    (snakeCoordinates[0], effectiveYCoordinate) for effectiveYCoordinate in range(snakeCoordinates[1] - SNAKE_ICON_WIDTH // 2, snakeCoordinates[1] + SNAKE_ICON_WIDTH // 2)
+                ]
+            else:
+                effectiveSnakeCoordinates = [
+                    (effectiveXCoordinate, snakeCoordinates[1]) for effectiveXCoordinate in range(snakeCoordinates[0] - SNAKE_ICON_WIDTH // 2, snakeCoordinates[0] + SNAKE_ICON_WIDTH // 2)
+                ]
+            for headCoordinate in effectiveSnakeCoordinates:
+                x_captured = (headCoordinate[0] >= preyCoordinates[0]) and (headCoordinate[0] <= preyCoordinates[2])
+                y_captured = (headCoordinate[1] >= preyCoordinates[1]) and (headCoordinate[1] <= preyCoordinates[3])
+                if (x_captured) and (y_captured):
+                    return True
+            x_captured: bool = (NewSnakeCoordinates[0] >= preyCoordinates[0]) and (NewSnakeCoordinates[0] <= preyCoordinates[2])
+            y_captured: bool = (NewSnakeCoordinates[1] >= preyCoordinates[1]) and (NewSnakeCoordinates[1] <= preyCoordinates[3])
+            return x_captured and y_captured
+
         NewSnakeCoordinates = self.calculateNewCoordinates()
         #complete the method implementation below
 
-        #ToDo -> Access Prey Coordinates with GUI
-        x_captured: bool = (NewSnakeCoordinates[0] >= self.preyCoordinates[0][0]-CAPTURE_THRESHOLD) and (NewSnakeCoordinates[0] <= self.preyCoordinates[-1][0]+CAPTURE_THRESHOLD)
-        y_captured: bool = (NewSnakeCoordinates[1] >= self.preyCoordinates[0][1]-CAPTURE_THRESHOLD) and (NewSnakeCoordinates[1] <= self.preyCoordinates[-1][1]+CAPTURE_THRESHOLD)
-        if x_captured and y_captured:
+        if isCaptured(snakeCoordinates = NewSnakeCoordinates, preyCoordinates = gui.canvas.coords(gui.preyIcon)): # Access from GUI:
             self.score += 1
             self.snakeCoordinates = [*self.snakeCoordinates, NewSnakeCoordinates] # Append New Snake Head
 
-            #ToDo -> No Threading in Part 1
+            #TODO -> No Threading in Part 1
             # score_thread = threading.Thread(
             #     target = gameQueue.put_nowait,
             #     args = ({"score" : self.score}, ),
@@ -255,17 +271,45 @@ class Game():
         THRESHOLD = 15   #sets how close prey can be to borders
         #complete the method implementation below
 
-        #ToDo -> Generate Prey Outside of Snake Coordinates.
-        #ToDo -> Determine Prey Capture Logic (If Snake Width > Prey Width, If Prey Width > Snake Width).
-        generatedCoordinates: tuple = (random.randint(THRESHOLD, WINDOW_WIDTH-THRESHOLD), random.randint(THRESHOLD, WINDOW_HEIGHT-THRESHOLD)) # Generated Coordinates
-        preyCoordinates = [
-            (generatedCoordinates[0] - PREY_ICON_WIDTH/2, generatedCoordinates[1] - PREY_ICON_WIDTH/2),
-            (generatedCoordinates[0] + PREY_ICON_WIDTH/2, generatedCoordinates[1] + PREY_ICON_WIDTH/2)
-        ] # Snake Coordinates
+        canvasCoordinates: list[tuple] = [(xCoordinate, yCoordinate) for xCoordinate in range(THRESHOLD, WINDOW_WIDTH - THRESHOLD) for yCoordinate in range(THRESHOLD, WINDOW_HEIGHT - THRESHOLD)]
+        for coordinate in self.snakeCoordinates:
+            for effectiveXCoordinate in range(coordinate[0] - SNAKE_ICON_WIDTH // 2, coordinate[0] + SNAKE_ICON_WIDTH // 2):
+                if (effectiveXCoordinate, coordinate[1]) in canvasCoordinates: # Exclude Coordinates to Account for Snake Width Along X Axis
+                    canvasCoordinates.remove((effectiveXCoordinate, coordinate[1]))
+            for effectiveYCoordinate in range(coordinate[1] - SNAKE_ICON_WIDTH // 2, coordinate[1] + SNAKE_ICON_WIDTH // 2):
+                if (coordinate[0], effectiveYCoordinate) in canvasCoordinates: # Exclude Coordinates to Account for Snake Width Along Y Axis
+                    canvasCoordinates.remove((coordinate[0], effectiveYCoordinate))
+        generatedCoordinates: tuple = (random.choice(canvasCoordinates))
+
+        #TODO -> Generate Prey Outside of Snake Coordinates.
+
+        # xCoordinates: list[int] = [xCoordinate for xCoordinate in range(THRESHOLD, WINDOW_WIDTH - THRESHOLD)]
+        # yCoordinates: list[int] = [yCoordinate for yCoordinate in range(THRESHOLD, WINDOW_HEIGHT - THRESHOLD)]
+
+        #TODO -> Determine if Excluding Radius is Viable
+        # snakeXCoordinates = [xCoordinate[0] for xCoordinate in self.snakeCoordinates]
+        # snakeYCoordinates = [yCoordinate[1] for yCoordinate in self.snakeCoordinates]
+
+        #TODO -> Need to Exclude Complete (X,Y) Coordinates instead of Just X, Y Values
+        # snakeXCoordinates = []
+        # snakeYCoordinates = []
+        # for coordinate in range(len(self.snakeCoordinates)):
+        #     for xCoordinate in range(self.snakeCoordinates[coordinate][0] - SNAKE_ICON_WIDTH // 2, self.snakeCoordinates[coordinate][0] + SNAKE_ICON_WIDTH // 2):
+        #         snakeXCoordinates.append(xCoordinate)
+        #     for yCoordinate in range(self.snakeCoordinates[coordinate][1] - SNAKE_ICON_WIDTH // 2, self.snakeCoordinates[coordinate][1] + SNAKE_ICON_WIDTH // 2):
+        #         snakeYCoordinates.append(yCoordinate)
+
+        # viableXCoordinates: list[int] = [xCoordinate for xCoordinate in xCoordinates if xCoordinate not in snakeXCoordinates]
+        # viableYCoordinates: list[int] = [yCoordinate for yCoordinate in yCoordinates if yCoordinate not in snakeYCoordinates]
+
+        preyCoordinates: tuple = (
+            generatedCoordinates[0] - PREY_ICON_WIDTH // 2, # x0
+            generatedCoordinates[1] - PREY_ICON_WIDTH // 2, # y0
+            generatedCoordinates[0] + PREY_ICON_WIDTH // 2, # x1
+            generatedCoordinates[1] + PREY_ICON_WIDTH // 2 # y1
+        )
 
         gameQueue.put_nowait({"prey" : preyCoordinates})
-
-        self.preyCoordinates = preyCoordinates
 
 if __name__ == "__main__":
     #some constants for our GUI
