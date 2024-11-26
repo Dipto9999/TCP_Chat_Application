@@ -252,13 +252,16 @@ class Game():
             To make playing the game easier, set the x and y to be THRESHOLD
             away from the walls.
         """
-        THRESHOLD = 2 * PREY_ICON_WIDTH   #sets how close prey can be to borders
+        THRESHOLD = 15   #sets how close prey can be to borders
         #complete the method implementation below
 
         #ToDo -> Generate Prey Outside of Snake Coordinates.
         #ToDo -> Determine Prey Capture Logic (If Snake Width > Prey Width, If Prey Width > Snake Width).
-        preyCoordinates: list[tuple] = [(random.randint(THRESHOLD, WINDOW_WIDTH-THRESHOLD), random.randint(THRESHOLD, WINDOW_HEIGHT-THRESHOLD))] # Generated Coordinates
-        preyCoordinates.append((preyCoordinates[0][0] + PREY_ICON_WIDTH, preyCoordinates[0][1] + PREY_ICON_WIDTH)) # Snake Coordinates
+        generatedCoordinates: tuple = (random.randint(THRESHOLD, WINDOW_WIDTH-THRESHOLD), random.randint(THRESHOLD, WINDOW_HEIGHT-THRESHOLD)) # Generated Coordinates
+        preyCoordinates = [
+            (generatedCoordinates[0] - PREY_ICON_WIDTH/2, generatedCoordinates[1] - PREY_ICON_WIDTH/2),
+            (generatedCoordinates[0] + PREY_ICON_WIDTH/2, generatedCoordinates[1] + PREY_ICON_WIDTH/2)
+        ] # Snake Coordinates
 
         gameQueue.put_nowait({"prey" : preyCoordinates})
 
