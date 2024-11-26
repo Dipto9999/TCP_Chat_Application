@@ -61,7 +61,7 @@ class ChatServer:
         self.handshake_thread.start()
         # self.exit()
 
-    #ToDo -> Implement Exit
+    #TODO -> Implement Exit
     def exit(self):
         for clientSocket in self.clientSockets:
             try:

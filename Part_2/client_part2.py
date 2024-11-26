@@ -62,14 +62,14 @@ class ChatClient:
         rcv_thread.start()
         # self.exit()
 
-    #ToDo -> Implement Exit
+    #TODO -> Implement Exit
     def exit(self):
         self.clientSocket.close() # Close Socket After Tkinter Window Closed.
 
     def send_msg(self, event):
         new_msg = f"{self.process_name}: {self.new_msg.get()}"
         self.new_msg.delete(0, END)
-        try: # Check if Connection Available
+        try: #TODO -> Check if Connection Available
             self.clientSocket.send(new_msg.encode())
         except:
             self.exit()
