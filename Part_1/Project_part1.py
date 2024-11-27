@@ -272,33 +272,13 @@ class Game():
         THRESHOLD_Y = 10
         #complete the method implementation below
 
-        canvasCoordinates: list[tuple] = [(xCoordinate, yCoordinate) for xCoordinate in range(THRESHOLD_X, WINDOW_WIDTH - THRESHOLD_X, 15) for yCoordinate in range(THRESHOLD_Y, WINDOW_HEIGHT - THRESHOLD_Y, 15)]
+        #TODO -> Generate Prey Outside of Snake Coordinates. Determine if Excluding Radius is Viable
+        canvasCoordinates: list[tuple] = [(xCoordinate, yCoordinate) for xCoordinate in range(THRESHOLD_X, WINDOW_WIDTH - THRESHOLD_X, SNAKE_ICON_WIDTH) for yCoordinate in range(THRESHOLD_Y, WINDOW_HEIGHT - THRESHOLD_Y, SNAKE_ICON_WIDTH)]
         for coordinate in self.snakeCoordinates:
-            if (coordinate[0], coordinate[1]) in canvasCoordinates:
-                canvasCoordinates.remove((coordinate[0], coordinate[1]))
+           if (coordinate[0], coordinate[1]) in canvasCoordinates:
+               canvasCoordinates.remove((coordinate[0], coordinate[1]))
         generatedCoordinates: tuple = (random.choice(canvasCoordinates))
         #generatedCoordinates: tuple = (random.choice(self.snakeCoordinates))
-
-        #TODO -> Generate Prey Outside of Snake Coordinates.
-
-        # xCoordinates: list[int] = [xCoordinate for xCoordinate in range(THRESHOLD, WINDOW_WIDTH - THRESHOLD)]
-        # yCoordinates: list[int] = [yCoordinate for yCoordinate in range(THRESHOLD, WINDOW_HEIGHT - THRESHOLD)]
-
-        #TODO -> Determine if Excluding Radius is Viable
-        # snakeXCoordinates = [xCoordinate[0] for xCoordinate in self.snakeCoordinates]
-        # snakeYCoordinates = [yCoordinate[1] for yCoordinate in self.snakeCoordinates]
-
-        #TODO -> Need to Exclude Complete (X,Y) Coordinates instead of Just X, Y Values
-        # snakeXCoordinates = []
-        # snakeYCoordinates = []
-        # for coordinate in range(len(self.snakeCoordinates)):
-        #     for xCoordinate in range(self.snakeCoordinates[coordinate][0] - SNAKE_ICON_WIDTH // 2, self.snakeCoordinates[coordinate][0] + SNAKE_ICON_WIDTH // 2):
-        #         snakeXCoordinates.append(xCoordinate)
-        #     for yCoordinate in range(self.snakeCoordinates[coordinate][1] - SNAKE_ICON_WIDTH // 2, self.snakeCoordinates[coordinate][1] + SNAKE_ICON_WIDTH // 2):
-        #         snakeYCoordinates.append(yCoordinate)
-
-        # viableXCoordinates: list[int] = [xCoordinate for xCoordinate in xCoordinates if xCoordinate not in snakeXCoordinates]
-        # viableYCoordinates: list[int] = [yCoordinate for yCoordinate in yCoordinates if yCoordinate not in snakeYCoordinates]
 
         preyCoordinates: tuple = (
             generatedCoordinates[0] - PREY_ICON_WIDTH // 2, # x0
@@ -314,7 +294,7 @@ if __name__ == "__main__":
     WINDOW_WIDTH = 500
     WINDOW_HEIGHT = 300
     SNAKE_ICON_WIDTH = 15
-    PREY_ICON_WIDTH = 15
+    PREY_ICON_WIDTH = 10
     #add the specified constant PREY_ICON_WIDTH here
 
     BACKGROUND_COLOUR = "black"   #you may change this colour if you wish
