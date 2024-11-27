@@ -268,39 +268,17 @@ class Game():
             To make playing the game easier, set the x and y to be THRESHOLD
             away from the walls.
         """
-        THRESHOLD = 15   #sets how close prey can be to borders
+        THRESHOLD_X = 5
+        THRESHOLD_Y = 10
         #complete the method implementation below
 
-        canvasCoordinates: list[tuple] = [(xCoordinate, yCoordinate) for xCoordinate in range(THRESHOLD, WINDOW_WIDTH - THRESHOLD) for yCoordinate in range(THRESHOLD, WINDOW_HEIGHT - THRESHOLD)]
+        #TODO -> Generate Prey Outside of Snake Coordinates. Determine if Excluding Radius is Viable
+        canvasCoordinates: list[tuple] = [(xCoordinate, yCoordinate) for xCoordinate in range(THRESHOLD_X, WINDOW_WIDTH - THRESHOLD_X, SNAKE_ICON_WIDTH) for yCoordinate in range(THRESHOLD_Y, WINDOW_HEIGHT - THRESHOLD_Y, SNAKE_ICON_WIDTH)]
         for coordinate in self.snakeCoordinates:
-            for effectiveXCoordinate in range(coordinate[0] - SNAKE_ICON_WIDTH // 2, coordinate[0] + SNAKE_ICON_WIDTH // 2):
-                if (effectiveXCoordinate, coordinate[1]) in canvasCoordinates: # Exclude Coordinates to Account for Snake Width Along X Axis
-                    canvasCoordinates.remove((effectiveXCoordinate, coordinate[1]))
-            for effectiveYCoordinate in range(coordinate[1] - SNAKE_ICON_WIDTH // 2, coordinate[1] + SNAKE_ICON_WIDTH // 2):
-                if (coordinate[0], effectiveYCoordinate) in canvasCoordinates: # Exclude Coordinates to Account for Snake Width Along Y Axis
-                    canvasCoordinates.remove((coordinate[0], effectiveYCoordinate))
+           if (coordinate[0], coordinate[1]) in canvasCoordinates:
+               canvasCoordinates.remove((coordinate[0], coordinate[1]))
         generatedCoordinates: tuple = (random.choice(canvasCoordinates))
-
-        #TODO -> Generate Prey Outside of Snake Coordinates.
-
-        # xCoordinates: list[int] = [xCoordinate for xCoordinate in range(THRESHOLD, WINDOW_WIDTH - THRESHOLD)]
-        # yCoordinates: list[int] = [yCoordinate for yCoordinate in range(THRESHOLD, WINDOW_HEIGHT - THRESHOLD)]
-
-        #TODO -> Determine if Excluding Radius is Viable
-        # snakeXCoordinates = [xCoordinate[0] for xCoordinate in self.snakeCoordinates]
-        # snakeYCoordinates = [yCoordinate[1] for yCoordinate in self.snakeCoordinates]
-
-        #TODO -> Need to Exclude Complete (X,Y) Coordinates instead of Just X, Y Values
-        # snakeXCoordinates = []
-        # snakeYCoordinates = []
-        # for coordinate in range(len(self.snakeCoordinates)):
-        #     for xCoordinate in range(self.snakeCoordinates[coordinate][0] - SNAKE_ICON_WIDTH // 2, self.snakeCoordinates[coordinate][0] + SNAKE_ICON_WIDTH // 2):
-        #         snakeXCoordinates.append(xCoordinate)
-        #     for yCoordinate in range(self.snakeCoordinates[coordinate][1] - SNAKE_ICON_WIDTH // 2, self.snakeCoordinates[coordinate][1] + SNAKE_ICON_WIDTH // 2):
-        #         snakeYCoordinates.append(yCoordinate)
-
-        # viableXCoordinates: list[int] = [xCoordinate for xCoordinate in xCoordinates if xCoordinate not in snakeXCoordinates]
-        # viableYCoordinates: list[int] = [yCoordinate for yCoordinate in yCoordinates if yCoordinate not in snakeYCoordinates]
+        #generatedCoordinates: tuple = (random.choice(self.snakeCoordinates))
 
         preyCoordinates: tuple = (
             generatedCoordinates[0] - PREY_ICON_WIDTH // 2, # x0
