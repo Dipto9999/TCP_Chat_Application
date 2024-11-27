@@ -268,18 +268,16 @@ class Game():
             To make playing the game easier, set the x and y to be THRESHOLD
             away from the walls.
         """
-        THRESHOLD = 15   #sets how close prey can be to borders
+        THRESHOLD_X = 5
+        THRESHOLD_Y = 10
         #complete the method implementation below
 
-        canvasCoordinates: list[tuple] = [(xCoordinate, yCoordinate) for xCoordinate in range(THRESHOLD, WINDOW_WIDTH - THRESHOLD) for yCoordinate in range(THRESHOLD, WINDOW_HEIGHT - THRESHOLD)]
+        canvasCoordinates: list[tuple] = [(xCoordinate, yCoordinate) for xCoordinate in range(THRESHOLD_X, WINDOW_WIDTH - THRESHOLD_X, 15) for yCoordinate in range(THRESHOLD_Y, WINDOW_HEIGHT - THRESHOLD_Y, 15)]
         for coordinate in self.snakeCoordinates:
-            for effectiveXCoordinate in range(coordinate[0] - SNAKE_ICON_WIDTH // 2, coordinate[0] + SNAKE_ICON_WIDTH // 2):
-                if (effectiveXCoordinate, coordinate[1]) in canvasCoordinates: # Exclude Coordinates to Account for Snake Width Along X Axis
-                    canvasCoordinates.remove((effectiveXCoordinate, coordinate[1]))
-            for effectiveYCoordinate in range(coordinate[1] - SNAKE_ICON_WIDTH // 2, coordinate[1] + SNAKE_ICON_WIDTH // 2):
-                if (coordinate[0], effectiveYCoordinate) in canvasCoordinates: # Exclude Coordinates to Account for Snake Width Along Y Axis
-                    canvasCoordinates.remove((coordinate[0], effectiveYCoordinate))
+            if (coordinate[0], coordinate[1]) in canvasCoordinates:
+                canvasCoordinates.remove((coordinate[0], coordinate[1]))
         generatedCoordinates: tuple = (random.choice(canvasCoordinates))
+        #generatedCoordinates: tuple = (random.choice(self.snakeCoordinates))
 
         #TODO -> Generate Prey Outside of Snake Coordinates.
 
@@ -316,7 +314,7 @@ if __name__ == "__main__":
     WINDOW_WIDTH = 500
     WINDOW_HEIGHT = 300
     SNAKE_ICON_WIDTH = 15
-    PREY_ICON_WIDTH = 10
+    PREY_ICON_WIDTH = 15
     #add the specified constant PREY_ICON_WIDTH here
 
     BACKGROUND_COLOUR = "black"   #you may change this colour if you wish
