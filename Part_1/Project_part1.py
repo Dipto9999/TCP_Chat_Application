@@ -55,7 +55,6 @@ class Gui():
             command=self.root.destroy)
         self.canvas.create_window(200, 100, anchor="nw", window=gameOverButton)
 
-
 class QueueHandler():
     """
         This class implements the queue handler for the game.
@@ -93,8 +92,6 @@ class QueueHandler():
                 self.queue.task_done()
         except queue.Empty:
             gui.root.after(100, self.queueHandler)
-
-
 class Game():
     '''
         This class implements most of the game functionalities.
@@ -127,7 +124,8 @@ class Game():
         SPEED = 0.15     #speed of snake updates (sec)
         while self.gameNotOver:
             #complete the method implementation below
-            pass #remove this line from your implementation
+            time.sleep(SPEED)
+            self.move()
 
     def whenAnArrowKeyIsPressed(self, e) -> None:
         """
@@ -159,9 +157,65 @@ class Game():
             The snake coordinates list (representing its length
             and position) should be correctly updated.
         """
+        #TODO -> Determine Prey Capture Logic (If Snake Width > Prey Width, If Prey Width > Snake Width).
+        def isCaptured(snakeCoordinates, preyCoordinates) -> bool:
+            effectiveSnakeCoordinates: list[tuple] = []
+            x_captured, y_captured = False, False
+            if self.direction in ("Left", "Right"):
+                effectiveSnakeCoordinates = [
+                    (snakeCoordinates[0], effectiveYCoordinate) for effectiveYCoordinate in range(snakeCoordinates[1] - SNAKE_ICON_WIDTH // 2, snakeCoordinates[1] + SNAKE_ICON_WIDTH // 2)
+                ]
+            else:
+                effectiveSnakeCoordinates = [
+                    (effectiveXCoordinate, snakeCoordinates[1]) for effectiveXCoordinate in range(snakeCoordinates[0] - SNAKE_ICON_WIDTH // 2, snakeCoordinates[0] + SNAKE_ICON_WIDTH // 2)
+                ]
+            for headCoordinate in effectiveSnakeCoordinates:
+                x_captured = (headCoordinate[0] >= preyCoordinates[0]) and (headCoordinate[0] <= preyCoordinates[2])
+                y_captured = (headCoordinate[1] >= preyCoordinates[1]) and (headCoordinate[1] <= preyCoordinates[3])
+                if (x_captured) and (y_captured):
+                    return True
+            x_captured: bool = (NewSnakeCoordinates[0] >= preyCoordinates[0]) and (NewSnakeCoordinates[0] <= preyCoordinates[2])
+            y_captured: bool = (NewSnakeCoordinates[1] >= preyCoordinates[1]) and (NewSnakeCoordinates[1] <= preyCoordinates[3])
+            return x_captured and y_captured
+
         NewSnakeCoordinates = self.calculateNewCoordinates()
         #complete the method implementation below
 
+        if isCaptured(snakeCoordinates = NewSnakeCoordinates, preyCoordinates = gui.canvas.coords(gui.preyIcon)): # Access from GUI:
+            self.score += 1
+            self.snakeCoordinates = [*self.snakeCoordinates, NewSnakeCoordinates] # Append New Snake Head
+
+            #TODO -> No Threading in Part 1
+            # score_thread = threading.Thread(
+            #     target = gameQueue.put_nowait,
+            #     args = ({"score" : self.score}, ),
+            #     daemon = True # Kill Thread When Spawning Thread Exits
+            # )
+            # prey_thread = threading.Thread(
+            #     target = self.createNewPrey,
+            #     daemon = True # Kill Thread When Spawning Thread Exits
+            # )
+            # score_thread.start()
+            # prey_thread.start()
+
+            gameQueue.put_nowait({"score" : self.score})
+            self.createNewPrey()
+        else:
+            self.snakeCoordinates = [*self.snakeCoordinates[1:], NewSnakeCoordinates] # Move Snake
+        # lost_thread = threading.Thread(
+        #     target = self.isGameOver,
+        #     args = (NewSnakeCoordinates, ),
+        #     daemon = True # Kill Thread When Spawning Thread Exits
+        # )
+        # move_thread = threading.Thread(
+        #     target = gameQueue.put_nowait,
+        #     args = ({"move" :  self.snakeCoordinates}, ),
+        #     daemon = True # Kill Thread When Spawning Thread Exits
+        # )
+        # lost_thread.start()
+        # move_thread.start()
+        self.isGameOver(NewSnakeCoordinates)
+        gameQueue.put_nowait({"move" :  self.snakeCoordinates})
 
     def calculateNewCoordinates(self) -> tuple:
         """
@@ -174,7 +228,15 @@ class Game():
         """
         lastX, lastY = self.snakeCoordinates[-1]
         #complete the method implementation below
-
+        if self.direction == "Left":
+            lastX -= SNAKE_ICON_WIDTH
+        elif self.direction == "Right":
+            lastX += SNAKE_ICON_WIDTH
+        elif self.direction == "Up":
+            lastY -= SNAKE_ICON_WIDTH
+        else:
+            lastY += SNAKE_ICON_WIDTH
+        return (lastX, lastY)
 
     def isGameOver(self, snakeCoordinates) -> None:
         """
@@ -187,6 +249,14 @@ class Game():
         x, y = snakeCoordinates
         #complete the method implementation below
 
+        x_collision: bool = (x <= 0) or (x >= WINDOW_WIDTH)
+        y_collision: bool = (y <= 0) or (y >= WINDOW_HEIGHT)
+
+        if (x_collision) or (y_collision) or ((x, y) in self.snakeCoordinates[:-1]):
+            self.gameNotOver = False
+            gameQueue.put_nowait({"game_over" : True})
+            return
+
     def createNewPrey(self) -> None:
         """
             This methods picks an x and a y randomly as the coordinate
@@ -198,19 +268,37 @@ class Game():
             To make playing the game easier, set the x and y to be THRESHOLD
             away from the walls.
         """
-        THRESHOLD = 15   #sets how close prey can be to borders
+        THRESHOLD_X = 5
+        THRESHOLD_Y = 10
         #complete the method implementation below
 
+        #TODO -> Generate Prey Outside of Snake Coordinates. Determine if Excluding Radius is Viable
+        canvasCoordinates: list[tuple] = [(xCoordinate, yCoordinate) for xCoordinate in range(THRESHOLD_X, WINDOW_WIDTH - THRESHOLD_X, SNAKE_ICON_WIDTH) for yCoordinate in range(THRESHOLD_Y, WINDOW_HEIGHT - THRESHOLD_Y, SNAKE_ICON_WIDTH)]
+        for coordinate in self.snakeCoordinates:
+           if (coordinate[0], coordinate[1]) in canvasCoordinates:
+               canvasCoordinates.remove((coordinate[0], coordinate[1]))
+        generatedCoordinates: tuple = (random.choice(canvasCoordinates))
+        #generatedCoordinates: tuple = (random.choice(self.snakeCoordinates))
+
+        preyCoordinates: tuple = (
+            generatedCoordinates[0] - PREY_ICON_WIDTH // 2, # x0
+            generatedCoordinates[1] - PREY_ICON_WIDTH // 2, # y0
+            generatedCoordinates[0] + PREY_ICON_WIDTH // 2, # x1
+            generatedCoordinates[1] + PREY_ICON_WIDTH // 2 # y1
+        )
+
+        gameQueue.put_nowait({"prey" : preyCoordinates})
 
 if __name__ == "__main__":
     #some constants for our GUI
     WINDOW_WIDTH = 500
     WINDOW_HEIGHT = 300
     SNAKE_ICON_WIDTH = 15
+    PREY_ICON_WIDTH = 10
     #add the specified constant PREY_ICON_WIDTH here
 
-    BACKGROUND_COLOUR = "green"   #you may change this colour if you wish
-    ICON_COLOUR = "yellow"        #you may change this colour if you wish
+    BACKGROUND_COLOUR = "black"   #you may change this colour if you wish
+    ICON_COLOUR = "blue"        #you may change this colour if you wish
 
     gameQueue = queue.Queue()     #instantiate a queue object using python's queue class
 
