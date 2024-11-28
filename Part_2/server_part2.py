@@ -51,7 +51,7 @@ class ChatServer:
         self.window.grid_columnconfigure(2, weight = 1) # Will Grow Proportionally
 
         # Establish Client Connection(s)
-        self.client_lock = threading.Lock()
+        self.lock = threading.Lock()
         self.socketInfo: list[dict] = []
         self.msg_threads: list[threading.Thread] = []
         self.handshake_thread = threading.Thread(
@@ -66,17 +66,28 @@ class ChatServer:
         self.window.protocol("WM_DELETE_WINDOW", self.exit)
 
     def exit(self) -> None:
-        self.client_lock.acquire() # Critical Section (Start)
-        for info in self.socketInfo:
+        self.lock.acquire() # Critical Section (Start)
+        readInfo: list[dict] = self.socketInfo.copy()
+        self.lock.release() # Critical Section (End)
+
+        staleInfo: list[dict] = []
+        for info in readInfo:
             try:
+                info["socket"].send("Server Offline".encode())
                 info["socket"].close()
             except socket.error:
-                continue # Socket Already Closed.
+                staleInfo.append(info) # Remove Info
             finally:
                 self.display_msg(f"""Client @PORT{info["addr"][1]} Closed""")
-        self.client_lock.release() # Critical Section (End)
-        self.serverSocket.close()
+
+        self.lock.acquire() # Critical Section (Start)
+        for info in self.socketInfo:
+            if info in staleInfo:
+                self.socketInfo.remove(info)
+        self.lock.release() # Critical Section (End)
+
         self.window.destroy()
+        self.serverSocket.close()
 
     def accept_clients(self, buffersize) -> None:
         # Enable Server to Accept Connections.
@@ -90,9 +101,9 @@ class ChatServer:
                 self.display_msg(msg = f"""Could Not Establish Client Connection""")
                 break
             else:
-                self.client_lock.acquire() # Critical Section (Start)
+                self.lock.acquire() # Critical Section (Start)
                 self.socketInfo.append(clientSocket)
-                self.client_lock.release() # Critical Section (End)
+                self.lock.release() # Critical Section (End)
 
                 client_thread = threading.Thread(
                     target = self.handle_msgs,
@@ -121,20 +132,28 @@ class ChatServer:
             else:
                 if recv_stream:
                     new_msg: str = recv_stream.decode() # Decode to String
-                    #TODO -> Look at Reader Implementation with Tomaz + Ask Professor
                     self.__send_tcp(new_msg)
         return
 
     def __send_tcp(self, msg: str) -> None:
-        self.client_lock.acquire() # Critical Section (Start)
-        for info in self.socketInfo:
+        #TODO -> Look at Writer/Reader Implementation with Tomaz + Ask Professor
+        self.lock.acquire() # Critical Section (Start)
+        readInfo: list[dict] = self.socketInfo.copy()
+        self.lock.release() # Critical Section (End)
+
+        staleInfo: list[dict] = []
+        for info in readInfo:
             try:
                 info["socket"].send(msg.encode())
             except socket.error:
-                self.socketInfo.remove(info) # Remove Info
-        self.client_lock.release() # Critical Section (End)
+                staleInfo.append(info) # Remove Info
         self.display_msg(msg)
 
+        self.lock.acquire() # Critical Section (Start)
+        for info in self.socketInfo:
+            if info in staleInfo:
+                self.socketInfo.remove(info)
+        self.lock.release() # Critical Section (End)
 def main(): #Note that the main function is outside the ChatServer class
     window = Tk()
     ChatServer(window)
