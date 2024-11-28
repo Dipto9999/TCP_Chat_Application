@@ -81,11 +81,11 @@ class ChatServer:
             finally:
                 self.display_msg(f"""Client @PORT{info["addr"][1]} Closed""")
 
-        self.lock.acquire() # Critical Section (Start)
         for info in staleInfo:
+            self.lock.acquire() # Critical Section (Start)
             if info in self.socketInfo:
                 self.socketInfo.remove(info)
-        self.lock.release() # Critical Section (End)
+            self.lock.release() # Critical Section (End)
 
         self.window.destroy()
         self.serverSocket.close()
@@ -150,11 +150,11 @@ class ChatServer:
                 staleInfo.append(info) # Remove Info
         self.display_msg(msg)
 
-        self.lock.acquire() # Critical Section (Start)
         for info in staleInfo:
+            self.lock.acquire() # Critical Section (Start)
             if info in self.socketInfo:
                 self.socketInfo.remove(info)
-        self.lock.release() # Critical Section (End)
+            self.lock.release() # Critical Section (End)
 def main(): #Note that the main function is outside the ChatServer class
     window = Tk()
     ChatServer(window)
