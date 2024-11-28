@@ -92,14 +92,13 @@ class ChatClient:
         while True: # Check if New Data Received.
             try:
                 recv_stream: bytes = self.clientSocket.recv(max_bytes) # Receive New Message
+            except socket.error:
+                break # New Data Cannot Be Received
+            else:
                 if recv_stream:
                     new_msg: str = recv_stream.decode() # Decode to String
                     self.display_msg(msg = new_msg, fromSelf = self.process_name in new_msg)
-                else:
-                    raise socket.error
-            except socket.error:
-                self.display_msg(msg = "Could Not Receive from Server...", fromSelf = True)
-                break # New Data Cannot Be Received
+        self.display_msg(msg = "Could Not Receive from Server...", fromSelf = True)
         return
 
     def __send_tcp(self, msg: str) -> None:

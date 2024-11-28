@@ -69,10 +69,11 @@ class ChatServer:
         self.client_lock.acquire() # Critical Section (Start)
         for info in self.socketInfo:
             try:
-                self.display_msg(f"""Client @PORT{info["addr"][1]} Closed""")
                 info["socket"].close()
             except socket.error:
-                continue # Socket is Closed.
+                continue # Socket Already Closed.
+            finally:
+                self.display_msg(f"""Client @PORT{info["addr"][1]} Closed""")
         self.client_lock.release() # Critical Section (End)
         self.serverSocket.close()
         self.window.destroy()
@@ -82,27 +83,27 @@ class ChatServer:
         self.serverSocket.listen(ChatServer.EXPECTED_CLIENTS)
         # print("Server Listening for Incoming Connection Request(s) ...")
         while True: # Infinite Loop Until Server Cannot Accept New Clients
+            clientSocket: dict = {}
             try:
-                clientSocket: dict = {}
                 clientSocket["socket"], clientSocket["addr"] = self.serverSocket.accept()
             except socket.error:
                 self.display_msg(msg = f"""Could Not Establish Client Connection""")
                 break
+            else:
+                self.client_lock.acquire() # Critical Section (Start)
+                self.socketInfo.append(clientSocket)
+                self.client_lock.release() # Critical Section (End)
 
-            self.client_lock.acquire() # Critical Section (Start)
-            self.socketInfo.append(clientSocket)
-            self.client_lock.release() # Critical Section (End)
-
-            client_thread = threading.Thread(
-                target = self.handle_msgs,
-                kwargs = {
-                    "recvInfo" : clientSocket,
-                    "max_bytes" : buffersize,
-                },  name = f"""Handle Messages : Client @PORT #{clientSocket["addr"][1]}""",
-                daemon = True # Kill Thread When Spawning Thread Exits
-            )
-            client_thread.start()
-            self.msg_threads.append(client_thread)
+                client_thread = threading.Thread(
+                    target = self.handle_msgs,
+                    kwargs = {
+                        "recvInfo" : clientSocket,
+                        "max_bytes" : buffersize,
+                    },  name = f"""Handle Messages : Client @PORT #{clientSocket["addr"][1]}""",
+                    daemon = True # Kill Thread When Spawning Thread Exits
+                )
+                client_thread.start()
+                self.msg_threads.append(client_thread)
         return
 
     def display_msg(self, msg: str) -> None:
@@ -115,15 +116,13 @@ class ChatServer:
             try:
                 recv_stream: bytes = recvInfo["socket"].recv(max_bytes)
             except socket.error:
+                self.display_msg(msg = f"""Could Not Receive from Client @PORT #{recvInfo["addr"][1]}...""")
                 break
-
-            if recv_stream:
-                new_msg: str = recv_stream.decode() # Decode to String
-                #TODO -> Look at Reader Implementation with Tomaz + Ask Professor
-                self.__send_tcp(new_msg)
             else:
-                break
-        self.display_msg(msg = f"""Could Not Receive from Client @PORT #{info["addr"][1]}...""")
+                if recv_stream:
+                    new_msg: str = recv_stream.decode() # Decode to String
+                    #TODO -> Look at Reader Implementation with Tomaz + Ask Professor
+                    self.__send_tcp(new_msg)
         return
 
     def __send_tcp(self, msg: str) -> None:
@@ -131,10 +130,10 @@ class ChatServer:
         for info in self.socketInfo:
             try:
                 info["socket"].send(msg.encode())
-                self.display_msg(msg)
             except socket.error:
                 self.socketInfo.remove(info) # Remove Info
         self.client_lock.release() # Critical Section (End)
+        self.display_msg(msg)
 
 def main(): #Note that the main function is outside the ChatServer class
     window = Tk()
