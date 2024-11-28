@@ -38,6 +38,11 @@ class ChatClient:
         self.chat_history = Text(self.window, yscrollcommand = self.scrollbar.set, state = DISABLED) # User Has Read-Only Access
         self.scrollbar.config(command = self.chat_history.yview)
 
+        # Indicate Messages From This Client
+        self.msg_offset: str = "\t"
+        if (window_width >= ChatClient.MIN_WIDTH_TAB): # Tabs Should be Relative to Window Width
+            self.msg_offset *= (window_width // ChatClient.MIN_WIDTH_TAB + 2)
+
         # Place Widgets with Grid Manager
         self.message_label.grid(row = 1, column = 1, sticky = W)
         self.history_label.grid(row = 2, column = 1, sticky = W)
@@ -54,48 +59,51 @@ class ChatClient:
         self.window.grid_columnconfigure(2, weight = 1) # Will Grow Proportionally
         self.window.grid_columnconfigure(2, weight = 1) # Will Grow Proportionally
 
-        rcv_thread = threading.Thread(
-            target = self.rcv_msg,
+        receive_msgs_thread = threading.Thread(
+            target = self.receive_msgs,
             args = (buffersize, ),
-            name = f"Handle Messages",
+            name = f"Receive Messages",
             daemon = True # Kill Thread When Spawning Thread (i.e. Main Thread) Exits
         )
-
-        rcv_thread.start()
+        receive_msgs_thread.start()
 
         #TODO -> Ask Professor if Code Sample is Alright to Include.
-        # Close Socket After Tkinter Window Closed.
-        self.window.protocol("WM_DELETE_WINDOW", self.exit)
+        self.window.protocol("WM_DELETE_WINDOW", self.exit) # Close Socket After Tkinter Window Closed.
 
     def exit(self) -> None:
-        self.clientSocket.close()
+        self.__send_tcp(f"{self.process_name} Disconnected!")
         self.window.destroy()
+        self.clientSocket.close()
 
     def send_msg(self, event) -> None:
-        new_msg = f"{self.process_name}: {self.new_msg.get()}"
-        self.new_msg.delete(0, END)
-        try: #TODO -> Check if Connection Available
-            self.clientSocket.send(new_msg.encode())
-        except:
-            self.exit()
+        new_msg: str = f"{self.process_name}: {self.new_msg.get()}"
+        self.new_msg.delete(0, END) # Flush Text from Entry Widget
+        self.__send_tcp(new_msg)
 
-    def rcv_msg(self, max_bytes) -> None:
-        self_offset: str = "\t"
-        if (self.window.winfo_width() >= ChatClient.MIN_WIDTH_TAB): # Tabs Should be Relative to Window Width
-            self_offset *= (self.window.winfo_width() // ChatClient.MIN_WIDTH_TAB + 1)
+    def display_msg(self, msg: str, fromSelf: bool = False) -> None:
+        self.chat_history.config(state = NORMAL)
+        if fromSelf:
+            self.chat_history.insert(END, f"{self.msg_offset}{msg}\n")
+        else:
+            self.chat_history.insert(END, f"{msg}\n")
+        self.chat_history.config(state = DISABLED)
 
+    def receive_msgs(self, max_bytes) -> None:
         open: bool = True
         while open: # Check if New Data Received.
             try:
-                new_msg: str = self.clientSocket.recv(max_bytes).decode()
-                self.chat_history.config(state = NORMAL)
-                if self.process_name in new_msg:
-                    self.chat_history.insert(END, f"{self_offset}{new_msg}\n")
-                else:
-                    self.chat_history.insert(END, f"{new_msg}\n")
-                self.chat_history.config(state = DISABLED)
+                new_msg: str = self.clientSocket.recv(max_bytes).decode() # Receive New Message
+                self.display_msg(msg = new_msg, fromSelf = self.process_name in new_msg)
             except Exception:
-                self.exit()
+                open = False
+                self.display_msg(msg = "Could Not Receive from Server...", fromSelf = True)
+
+    def __send_tcp(self, msg: str) -> None:
+        try: #TODO -> Check if Connection Available
+            self.clientSocket.send(msg.encode()) # Send New Message
+        except Exception:
+            self.display_msg(msg = "Lost Connection to Server!", fromSelf = True)
+
 
 def main(): #Note that the main function is outside the ChatClient class
     window = Tk()

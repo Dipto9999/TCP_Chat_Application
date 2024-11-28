@@ -62,17 +62,15 @@ class ChatServer:
         self.handshake_thread.start()
 
         #TODO -> Ask Professor if Code Segment is Alright to Include.
-        # Close Sockets After Tkinter Window Closed.
-        self.window.protocol("WM_DELETE_WINDOW", self.exit)
+        self.window.protocol("WM_DELETE_WINDOW", self.exit) # Close Sockets After Tkinter Window Closed.
 
     def exit(self) -> None:
-        for clientSocket in self.clientSockets:
-            try:
-                clientSocket["socket"].close()
-            except:
-                continue
-        self.serverSocket.close()
+        self.client_lock.acquire() # Critical Section (Start)
+        for clientSocket in self.clientSockets: # Close Client Sockets
+            _: bool = self.__send_tcp(clientSocket = clientSocket, msg = "Server Disconnected!", closeSocket = True)
+        self.client_lock.release() # Critical Section (End)
         self.window.destroy()
+        self.serverSocket.close()
 
     def accept_clients(self, buffersize) -> None:
         # Enable Server to Accept Connections.
@@ -90,9 +88,8 @@ class ChatServer:
             client_thread = threading.Thread(
                 target = self.handle_msgs,
                 kwargs = {
-                    "max_bytes" : buffersize,
                     "rcvSocket" : connSocket,
-                    "rcv_addr" : addr,
+                    "max_bytes" : buffersize,
                 },  name = f"Handle Messages : Client @PORT{addr[1]}",
                 daemon = True # Kill Thread When Spawning Thread Exits
             )
@@ -100,25 +97,31 @@ class ChatServer:
             self.msg_threads.append(client_thread)
         return
 
-    def handle_msgs(self, max_bytes: int, rcvSocket: socket.socket, rcv_addr: tuple) -> None:
+    def handle_msgs(self, rcvSocket: socket.socket, max_bytes: int) -> None:
         while True: # Check if New Data Received.
             try:
-                new_msg = rcvSocket.recv(max_bytes).decode()
+                new_msg: str = rcvSocket.recv(max_bytes).decode() # Receive New Message
 
                 #TODO -> Look at Reader Implementation with Tomaz + Ask Professor
                 self.client_lock.acquire() # Critical Section (Start)
                 for clientSocket in self.clientSockets:
-                    try:
-                        clientSocket["socket"].send(new_msg.encode())
-                    except:
-                        self.clientSockets.remove(clientSocket) # Remove Client Socket
+                    self.__send_tcp(clientSocket = clientSocket, msg = new_msg)
                 self.client_lock.release() # Critical Section (End)
 
                 self.chat_history.config(state = NORMAL)
                 self.chat_history.insert(END, f"{new_msg}\n")
                 self.chat_history.config(state = DISABLED)
             except:
-                return # New Data Cannot Be Received
+                return
+
+    def __send_tcp(self, clientSocket: dict, msg: str, closeSocket: bool = False) -> None:
+        try:
+            clientSocket["socket"].send(msg.encode())
+            if closeSocket:
+                clientSocket["socket"].close()
+                self.clientSockets.remove(clientSocket)
+        except:
+            self.clientSockets.remove(clientSocket) # Socket is Closed and Cannot Communicate. Remove Socket Info.
 
 def main(): #Note that the main function is outside the ChatServer class
     window = Tk()
