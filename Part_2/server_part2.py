@@ -48,7 +48,8 @@ class ChatServer:
 
         self.window.grid_columnconfigure(1, weight = 0) # Won't Grow
         self.window.grid_columnconfigure(2, weight = 1) # Will Grow Proportionally
-        self.window.grid_columnconfigure(2, weight = 1) # Will Grow Proportionally
+        self.window.grid_columnconfigure(3, weight = 1) # Will Grow Proportionally
+        self.window.grid_columnconfigure(4, weight = 0) # Won't Grow
 
         # Establish Client Connection(s)
         self.lock = threading.Lock()
