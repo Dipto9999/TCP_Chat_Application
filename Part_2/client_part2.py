@@ -117,6 +117,7 @@ class ChatClient:
                     new_msg: str = recv_stream.decode() # Decode to String
                     self.display_msg(msg = new_msg, sentByMe = self.process_name in new_msg)
         self.display_msg(msg = "Could Not Receive from Server...", sentByMe = False)
+        self.window.title(f"{self.process_name} Disconnected")
         return
 
     def __send_tcp(self, msg: str) -> None:
