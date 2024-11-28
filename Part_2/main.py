@@ -11,6 +11,6 @@ if __name__ == "__main__":
     server.start()
     time.sleep(1)  #to ensure server is up and running; may be commented out or changed
 
-    numberOfClients = 4  #Change this value for a different number of clients
+    numberOfClients = 3  #Change this value for a different number of clients
     for count in range(1, numberOfClients+1):
         multiprocessing.Process(target=client.main, name=f"Client{count}").start()

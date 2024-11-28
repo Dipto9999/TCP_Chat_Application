@@ -14,7 +14,8 @@ class ChatClient:
     It uses the socket module to create a TCP socket and to connect to the server.
     It uses the tkinter module to create the GUI for the chat client.
     """
-    def __init__(self, window: Tk, host: str = "127.0.0.1", serverPort: int = 3234, buffersize: int = 1024):
+    MIN_WIDTH_TAB = 400
+    def __init__(self, window: Tk, window_width: int = 650, host: str = "127.0.0.1", serverPort: int = 3234, buffersize: int = 1024):
         # Establish TCP Server-Client Connection.
         self.clientSocket = socket.socket(family = socket.AF_INET, type = socket.SOCK_STREAM)
         self.clientSocket.connect((host, serverPort))
@@ -23,6 +24,7 @@ class ChatClient:
 
         # Tkinter Window Setup
         self.window = window
+        self.window.geometry(f"{window_width}x400")
         self.window.title(f"{self.process_name} @PORT #{self.clientSocket.getsockname()[1]}")
 
         # Define and Configure Widgets
@@ -60,13 +62,16 @@ class ChatClient:
         )
 
         rcv_thread.start()
-        # self.exit()
 
-    #TODO -> Implement Exit
-    def exit(self):
-        self.clientSocket.close() # Close Socket After Tkinter Window Closed.
+        #TODO -> Ask Professor if Code Sample is Alright to Include.
+        # Close Socket After Tkinter Window Closed.
+        self.window.protocol("WM_DELETE_WINDOW", self.exit)
 
-    def send_msg(self, event):
+    def exit(self) -> None:
+        self.clientSocket.close()
+        self.window.destroy()
+
+    def send_msg(self, event) -> None:
         new_msg = f"{self.process_name}: {self.new_msg.get()}"
         self.new_msg.delete(0, END)
         try: #TODO -> Check if Connection Available
@@ -75,7 +80,9 @@ class ChatClient:
             self.exit()
 
     def rcv_msg(self, max_bytes) -> None:
-        self_offset: str = "\t" * 5
+        self_offset: str = "\t"
+        if (self.window.winfo_width() >= ChatClient.MIN_WIDTH_TAB): # Tabs Should be Relative to Window Width
+            self_offset *= (self.window.winfo_width() // ChatClient.MIN_WIDTH_TAB + 1)
 
         open: bool = True
         while open: # Check if New Data Received.
@@ -92,8 +99,7 @@ class ChatClient:
 
 def main(): #Note that the main function is outside the ChatClient class
     window = Tk()
-    # window.geometry("650x400")
-    client = ChatClient(window)
+    c = ChatClient(window)
     window.mainloop()
     #May add more or modify, if needed
 

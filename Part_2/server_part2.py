@@ -25,6 +25,7 @@ class ChatServer:
 
         # Tkinter Window Setup
         self.window = window
+        self.window.geometry("400x400")
         self.window.title("Chat Server")
 
         # Define and Configure Widgets
@@ -59,23 +60,29 @@ class ChatServer:
             daemon = True # Kill Thread When Spawning Thread (i.e. Main Thread) Exits
         )
         self.handshake_thread.start()
-        # self.exit()
 
-    #TODO -> Implement Exit
-    def exit(self):
+        #TODO -> Ask Professor if Code Segment is Alright to Include.
+        # Close Sockets After Tkinter Window Closed.
+        self.window.protocol("WM_DELETE_WINDOW", self.exit)
+
+    def exit(self) -> None:
         for clientSocket in self.clientSockets:
             try:
                 clientSocket["socket"].close()
-            except Exception as e:
-                print(e)
+            except:
+                continue
         self.serverSocket.close()
+        self.window.destroy()
 
-    def accept_clients(self, buffersize):
+    def accept_clients(self, buffersize) -> None:
         # Enable Server to Accept Connections.
         self.serverSocket.listen(ChatServer.EXPECTED_CLIENTS)
         print("Server Listening for Incoming Connection Request(s) ...")
-        while True: # Infinite Loop, Checking for New Clients
-            connSocket, addr = self.serverSocket.accept()
+        while True: # Infinite Loop Until Server Cannot Accept New Clients
+            try:
+                connSocket, addr = self.serverSocket.accept()
+            except:
+                break
             self.client_lock.acquire() # Critical Section (Start)
             self.clientSockets.append({"socket" : connSocket, "addr" : addr})
             self.client_lock.release() # Critical Section (End)
@@ -91,12 +98,14 @@ class ChatServer:
             )
             client_thread.start()
             self.msg_threads.append(client_thread)
+        return
 
     def handle_msgs(self, max_bytes: int, rcvSocket: socket.socket, rcv_addr: tuple) -> None:
         while True: # Check if New Data Received.
             try:
                 new_msg = rcvSocket.recv(max_bytes).decode()
 
+                #TODO -> Look at Reader Implementation with Tomaz + Ask Professor
                 self.client_lock.acquire() # Critical Section (Start)
                 for clientSocket in self.clientSockets:
                     try:
@@ -113,8 +122,7 @@ class ChatServer:
 
 def main(): #Note that the main function is outside the ChatServer class
     window = Tk()
-    # window.geometry("400x400")
-    server = ChatServer(window)
+    ChatServer(window)
     window.mainloop()
     #May add more or modify, if needed
 
