@@ -25,7 +25,7 @@ class ChatClient:
         self.window.geometry(f"{window_width}x400")
 
         # Define and Configure Widgets
-        self.conn_btn = Button(self.window, text = "Connect to Server", command = self.conn_tcp)
+        self.conn_btn = Button(self.window, text = "Server\nConnect", command = self.conn_tcp)
 
         self.msg_label = Label(self.window, text = "Chat Message: ", font = ("Helvetica", 12, "normal"))
         self.history_label = Label(self.window, text = "Chat History:", font = ("Helvetica", 12, "normal"))
@@ -38,32 +38,33 @@ class ChatClient:
         self.scrollbar.config(command = self.chat_history.yview)
 
         # Place Widgets with Grid Manager
-        self.conn_btn.grid(row = 1, column = 3, sticky = E)
-        self.msg_label.grid(row = 2, column = 1, sticky = W)
-        self.msg_entry.grid(row = 2, column = 2, sticky = EW)
-        self.history_label.grid(row = 3, column = 1, sticky = W)
-        self.chat_history.grid(row = 4, column = 1, columnspan = 3, sticky = NSEW)
-        self.scrollbar.grid(row = 4, column = 4, sticky = NS)
+        self.conn_btn.grid(row = 1, column = 3, sticky = E, padx = 5, pady = 5)
+        self.msg_label.grid(row = 1, column = 1, sticky = W)
+        self.msg_entry.grid(row = 1, column = 2, sticky = EW)
+        self.history_label.grid(row = 2, column = 1, sticky = W)
+        self.chat_history.grid(row = 3, column = 1, columnspan = 3, sticky = NSEW)
+        self.scrollbar.grid(row = 3, column = 4, sticky = NS)
 
         # Configure Rows and Columns for Window Resizing.
         self.window.grid_rowconfigure(1, weight = 0) # Won't Grow
         self.window.grid_rowconfigure(2, weight = 0) # Won't Grow
-        self.window.grid_rowconfigure(3, weight = 0) # Will Grow Proportionally
-        self.window.grid_rowconfigure(4, weight = 1) # Will Grow Proportionally
+        self.window.grid_rowconfigure(3, weight = 1) # Will Grow Proportionally
 
-        self.window.grid_columnconfigure(1, weight = 0) # Won't Grow
-        self.window.grid_columnconfigure(2, weight = 2) # Will Grow Proportionally
+        self.window.grid_columnconfigure(1, weight = 0) # Will Grow Proportionally
+        self.window.grid_columnconfigure(2, weight = 1) # Won't Grow
         self.window.grid_columnconfigure(3, weight = 1) # Will Grow Proportionally
-        self.window.grid_columnconfigure(4, weight = 1) # Will Grow Proportionally
+        self.window.grid_columnconfigure(4, weight = 0) # Won't Grow
+
+        self.window.update_idletasks() # Update Displays of Windows
 
         # Indicate Messages From Client
-        self.msg_offset: str = "\t"
-        if (window_width >= ChatClient.MIN_WIDTH_TAB): # Tabs Should be Relative to Window Width
-            self.msg_offset *= (window_width // ChatClient.MIN_WIDTH_TAB + 2)
+        self.msg_offset: str = "\t\t"
+        if (self.window.winfo_width() >= ChatClient.MIN_WIDTH_TAB): # Tabs Should be Relative to Initial Window Width
+            self.msg_offset = "\t" * (self.window.winfo_width() // ChatClient.MIN_WIDTH_TAB + 2)
 
         self.conn_tcp() # Establish TCP Server-Client Connection.
 
-        #TODO -> Ask Professor if Code Sample is Alright to Include.
+        #TODO -> Document Exit Conditions
         self.window.protocol("WM_DELETE_WINDOW", self.exit) # Close Socket After Tkinter Window Closed.
 
     def exit(self) -> None:

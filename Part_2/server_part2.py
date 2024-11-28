@@ -62,7 +62,7 @@ class ChatServer:
         )
         self.handshake_thread.start()
 
-        #TODO -> Ask Professor if Code Segment is Alright to Include.
+        #TODO -> Document Exit Conditions
         # Close Sockets After Tkinter Window Closed.
         self.window.protocol("WM_DELETE_WINDOW", self.exit)
 
@@ -82,8 +82,8 @@ class ChatServer:
                 self.display_msg(f"""Client @PORT{info["addr"][1]} Closed""")
 
         self.lock.acquire() # Critical Section (Start)
-        for info in self.socketInfo:
-            if info in staleInfo:
+        for info in staleInfo:
+            if info in self.socketInfo:
                 self.socketInfo.remove(info)
         self.lock.release() # Critical Section (End)
 
@@ -137,7 +137,7 @@ class ChatServer:
         return
 
     def __send_tcp(self, msg: str) -> None:
-        #TODO -> Look at Writer/Reader Implementation with Tomaz + Ask Professor
+        #TODO -> Ask Professor about Writer/Reader Implementation
         self.lock.acquire() # Critical Section (Start)
         readInfo: list[dict] = self.socketInfo.copy()
         self.lock.release() # Critical Section (End)
@@ -151,8 +151,8 @@ class ChatServer:
         self.display_msg(msg)
 
         self.lock.acquire() # Critical Section (Start)
-        for info in self.socketInfo:
-            if info in staleInfo:
+        for info in staleInfo:
+            if info in self.socketInfo:
                 self.socketInfo.remove(info)
         self.lock.release() # Critical Section (End)
 def main(): #Note that the main function is outside the ChatServer class
