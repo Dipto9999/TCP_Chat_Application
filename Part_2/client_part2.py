@@ -72,8 +72,8 @@ class ChatClient:
 
     def exit(self) -> None:
         self.__send_tcp(f"{self.process_name} Disconnected!")
-        self.window.destroy()
         self.clientSocket.close()
+        self.window.destroy()
 
     def send_msg(self, event) -> None:
         new_msg: str = f"{self.process_name}: {self.new_msg.get()}"
@@ -89,21 +89,24 @@ class ChatClient:
         self.chat_history.config(state = DISABLED)
 
     def receive_msgs(self, max_bytes) -> None:
-        open: bool = True
-        while open: # Check if New Data Received.
+        while True: # Check if New Data Received.
             try:
-                new_msg: str = self.clientSocket.recv(max_bytes).decode() # Receive New Message
-                self.display_msg(msg = new_msg, fromSelf = self.process_name in new_msg)
-            except Exception:
-                open = False
+                recv_stream: bytes = self.clientSocket.recv(max_bytes) # Receive New Message
+                if recv_stream:
+                    new_msg: str = recv_stream.decode() # Decode to String
+                    self.display_msg(msg = new_msg, fromSelf = self.process_name in new_msg)
+                else:
+                    raise socket.error
+            except socket.error:
                 self.display_msg(msg = "Could Not Receive from Server...", fromSelf = True)
+                break # New Data Cannot Be Received
+        return
 
     def __send_tcp(self, msg: str) -> None:
-        try: #TODO -> Check if Connection Available
+        try:
             self.clientSocket.send(msg.encode()) # Send New Message
-        except Exception:
+        except socket.error:
             self.display_msg(msg = "Lost Connection to Server!", fromSelf = True)
-
 
 def main(): #Note that the main function is outside the ChatClient class
     window = Tk()

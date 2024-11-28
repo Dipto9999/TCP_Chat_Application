@@ -52,7 +52,7 @@ class ChatServer:
 
         # Establish Client Connection(s)
         self.client_lock = threading.Lock()
-        self.clientSockets: list[dict] = []
+        self.socketInfo: list[dict] = []
         self.msg_threads: list[threading.Thread] = []
         self.handshake_thread = threading.Thread(
             target = self.accept_clients,
@@ -62,66 +62,79 @@ class ChatServer:
         self.handshake_thread.start()
 
         #TODO -> Ask Professor if Code Segment is Alright to Include.
-        self.window.protocol("WM_DELETE_WINDOW", self.exit) # Close Sockets After Tkinter Window Closed.
+        # Close Sockets After Tkinter Window Closed.
+        self.window.protocol("WM_DELETE_WINDOW", self.exit)
 
     def exit(self) -> None:
         self.client_lock.acquire() # Critical Section (Start)
-        for clientSocket in self.clientSockets: # Close Client Sockets
-            _: bool = self.__send_tcp(clientSocket = clientSocket, msg = "Server Disconnected!", closeSocket = True)
+        for info in self.socketInfo:
+            try:
+                self.display_msg(f"""Client @PORT{info["addr"][1]} Closed""")
+                info["socket"].close()
+            except socket.error:
+                continue # Socket is Closed.
         self.client_lock.release() # Critical Section (End)
-        self.window.destroy()
         self.serverSocket.close()
+        self.window.destroy()
 
     def accept_clients(self, buffersize) -> None:
         # Enable Server to Accept Connections.
         self.serverSocket.listen(ChatServer.EXPECTED_CLIENTS)
-        print("Server Listening for Incoming Connection Request(s) ...")
+        # print("Server Listening for Incoming Connection Request(s) ...")
         while True: # Infinite Loop Until Server Cannot Accept New Clients
             try:
-                connSocket, addr = self.serverSocket.accept()
-            except:
+                clientSocket: dict = {}
+                clientSocket["socket"], clientSocket["addr"] = self.serverSocket.accept()
+            except socket.error:
+                self.display_msg(msg = f"""Could Not Establish Client Connection""")
                 break
+
             self.client_lock.acquire() # Critical Section (Start)
-            self.clientSockets.append({"socket" : connSocket, "addr" : addr})
+            self.socketInfo.append(clientSocket)
             self.client_lock.release() # Critical Section (End)
 
             client_thread = threading.Thread(
                 target = self.handle_msgs,
                 kwargs = {
-                    "rcvSocket" : connSocket,
+                    "recvInfo" : clientSocket,
                     "max_bytes" : buffersize,
-                },  name = f"Handle Messages : Client @PORT{addr[1]}",
+                },  name = f"""Handle Messages : Client @PORT #{clientSocket["addr"][1]}""",
                 daemon = True # Kill Thread When Spawning Thread Exits
             )
             client_thread.start()
             self.msg_threads.append(client_thread)
         return
 
-    def handle_msgs(self, rcvSocket: socket.socket, max_bytes: int) -> None:
+    def display_msg(self, msg: str) -> None:
+        self.chat_history.config(state = NORMAL)
+        self.chat_history.insert(END, f"{msg}\n")
+        self.chat_history.config(state = DISABLED)
+
+    def handle_msgs(self, recvInfo: dict, max_bytes: int) -> None:
         while True: # Check if New Data Received.
             try:
-                new_msg: str = rcvSocket.recv(max_bytes).decode() # Receive New Message
+                recv_stream: bytes = recvInfo["socket"].recv(max_bytes)
+            except socket.error:
+                break
 
+            if recv_stream:
+                new_msg: str = recv_stream.decode() # Decode to String
                 #TODO -> Look at Reader Implementation with Tomaz + Ask Professor
-                self.client_lock.acquire() # Critical Section (Start)
-                for clientSocket in self.clientSockets:
-                    self.__send_tcp(clientSocket = clientSocket, msg = new_msg)
-                self.client_lock.release() # Critical Section (End)
+                self.__send_tcp(new_msg)
+            else:
+                break
+        self.display_msg(msg = f"""Could Not Receive from Client @PORT #{info["addr"][1]}...""")
+        return
 
-                self.chat_history.config(state = NORMAL)
-                self.chat_history.insert(END, f"{new_msg}\n")
-                self.chat_history.config(state = DISABLED)
-            except:
-                return
-
-    def __send_tcp(self, clientSocket: dict, msg: str, closeSocket: bool = False) -> None:
-        try:
-            clientSocket["socket"].send(msg.encode())
-            if closeSocket:
-                clientSocket["socket"].close()
-                self.clientSockets.remove(clientSocket)
-        except:
-            self.clientSockets.remove(clientSocket) # Socket is Closed and Cannot Communicate. Remove Socket Info.
+    def __send_tcp(self, msg: str) -> None:
+        self.client_lock.acquire() # Critical Section (Start)
+        for info in self.socketInfo:
+            try:
+                info["socket"].send(msg.encode())
+                self.display_msg(msg)
+            except socket.error:
+                self.socketInfo.remove(info) # Remove Info
+        self.client_lock.release() # Critical Section (End)
 
 def main(): #Note that the main function is outside the ChatServer class
     window = Tk()
