@@ -157,22 +157,26 @@ class Game():
             The snake coordinates list (representing its length
             and position) should be correctly updated.
         """
-    
+
         def isCaptured(snakeCoordinates, preyCoordinates) -> bool:
-            
             snake_x0 = snakeCoordinates[0] - SNAKE_ICON_WIDTH // 2
             snake_y0 = snakeCoordinates[1] - SNAKE_ICON_WIDTH // 2
             snake_x1 = snakeCoordinates[0] + SNAKE_ICON_WIDTH // 2
             snake_y1 = snakeCoordinates[1] + SNAKE_ICON_WIDTH // 2
 
             # Checks if Snake Coordinates are in Prey Coordinates (Instance where Prey could be much larger than Snake)
-            if (snake_x0 <= preyCoordinates[2] and snake_y0 <= preyCoordinates[3] and snake_x0 >= preyCoordinates[0] and snake_y0 >= preyCoordinates[1]) or (snake_x1 >= preyCoordinates[0] and snake_y1 >= preyCoordinates[1] and snake_x1 <= preyCoordinates[2] and snake_y1 <= preyCoordinates[3]):
+            if (snake_x0 <= preyCoordinates[2] and snake_y0 <= preyCoordinates[3]) and (snake_x0 >= preyCoordinates[0] and snake_y0 >= preyCoordinates[1]): # Snake Point 0 in Prey
+                return True
+            elif (snake_x1 >= preyCoordinates[0] and snake_y1 >= preyCoordinates[1]) and (snake_x1 <= preyCoordinates[2] and snake_y1 <= preyCoordinates[3]): # Snake Point 1 in Prey
                 return True
             # Checks if Prey Coordinates are in Snake Coordinates (Instance where Snake could be much larger than Prey)
-            elif (preyCoordinates[2] >= snake_x0 and preyCoordinates[3] >= snake_y0 and preyCoordinates[2] <= snake_x1 and preyCoordinates[3] <= snake_y1) or (preyCoordinates[0] <= snake_x1 and preyCoordinates[1] <= snake_y1 and preyCoordinates[0] >= snake_x0 and preyCoordinates[1] >= snake_y0):
+            elif (preyCoordinates[2] >= snake_x0 and preyCoordinates[3] >= snake_y0) and (preyCoordinates[2] <= snake_x1 and preyCoordinates[3] <= snake_y1): # Prey Point 0 in Snake
                 return True
-            return False
-              
+            elif (preyCoordinates[0] <= snake_x1 and preyCoordinates[1] <= snake_y1) and (preyCoordinates[0] >= snake_x0 and preyCoordinates[1] >= snake_y0): # Prey Point 1 in sNAKE
+                return True
+            else:
+                return False
+
 
         NewSnakeCoordinates = self.calculateNewCoordinates()
         #complete the method implementation below
