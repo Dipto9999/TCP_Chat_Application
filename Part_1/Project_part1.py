@@ -172,7 +172,7 @@ class Game():
             # Checks if Prey Coordinates are in Snake Coordinates (Instance where Snake could be much larger than Prey)
             elif (preyCoordinates[2] >= snake_x0 and preyCoordinates[3] >= snake_y0) and (preyCoordinates[2] <= snake_x1 and preyCoordinates[3] <= snake_y1): # Prey Point 0 in Snake
                 return True
-            elif (preyCoordinates[0] <= snake_x1 and preyCoordinates[1] <= snake_y1) and (preyCoordinates[0] >= snake_x0 and preyCoordinates[1] >= snake_y0): # Prey Point 1 in sNAKE
+            elif (preyCoordinates[0] <= snake_x1 and preyCoordinates[1] <= snake_y1) and (preyCoordinates[0] >= snake_x0 and preyCoordinates[1] >= snake_y0): # Prey Point 1 in Snake
                 return True
             else:
                 return False
