@@ -184,9 +184,9 @@ class Game():
         #complete the method implementation below
 
         if isCaptured(snakeCoordinates = NewSnakeCoordinates, preyCoordinates = gui.canvas.coords(gui.preyIcon)): # Access from GUI:
-            self.score += 1
             self.snakeCoordinates = [*self.snakeCoordinates, NewSnakeCoordinates] # Append New Snake Head
 
+            self.score += 1
             gameQueue.put_nowait({"score" : self.score})
             self.createNewPrey()
         else:
@@ -232,7 +232,7 @@ class Game():
         if (x_collision) or (y_collision) or ((x, y) in self.snakeCoordinates[:-1]):
             self.gameNotOver = False
             gameQueue.put_nowait({"game_over" : True})
-            return
+        return
 
     def createNewPrey(self) -> None:
         """

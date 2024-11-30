@@ -45,6 +45,8 @@ class Gui():
         for key in ("Left", "Right", "Up", "Down"):
             self.root.bind(f"<Key-{key}>", game.whenAnArrowKeyIsPressed)
 
+        # self.root.after(100, game.updateGUI, self)
+
     def gameOver(self):
         """
             This method is used at the end to display a
@@ -64,8 +66,12 @@ class Game():
            This initializer sets the initial snake coordinate list, movement
            direction, and arranges for the first prey to be created.
         """
-        self.read = threading.Lock()
-        self.full = threading.Semaphore()
+        self.locks = {
+            "game_over": threading.Lock(),
+            "move": threading.Lock(),
+            "prey": threading.Lock(),
+            "score": threading.Lock(),
+        }
         self.writecount: int = 0
 
         #starting length and location of the snake
@@ -77,7 +83,9 @@ class Game():
         self.direction = "Left"
         self.gameNotOver = True
         self.score: int = 0
-        self.preyCoordinates: tuple = self.createNewPrey()
+
+        self.createNewPrey() # Generate First Prey
+
 
     def superloop(self) -> None:
         """
@@ -87,9 +95,8 @@ class Game():
             Use the SPEED constant to set how often the move tasks
             are generated.
         """
-
         SPEED = 0.15     #speed of snake updates (sec)
-        while self.gameNotOver:
+        while True:
             #complete the method implementation below
             time.sleep(SPEED)
             self.move()
@@ -124,40 +131,73 @@ class Game():
             The snake coordinates list (representing its length
             and position) should be correctly updated.
         """
+        def isCaptured(snakeCoordinates) -> bool:
+            self.locks["prey"].acquire()
+            preyCoordinates: tuple = self.preyCoordinates # Read Prey Coordinates for Processing
+            self.locks["prey"].release()
+
+            captureCoordinates = (
+                snakeCoordinates[0] - SNAKE_ICON_WIDTH // 2, # x0
+                snakeCoordinates[1] - SNAKE_ICON_WIDTH // 2, # y0
+                snakeCoordinates[0] + SNAKE_ICON_WIDTH // 2, # x1
+                snakeCoordinates[1] + SNAKE_ICON_WIDTH // 2 # y1
+            )
+
+            isCaptured: bool = False
+            # Checks if Snake Coordinates are in Prey Coordinates (Instance where Prey could be much larger than Snake)
+            if (captureCoordinates[0] <= preyCoordinates[2] and captureCoordinates[1] <= preyCoordinates[3]) and (captureCoordinates[0] >= preyCoordinates[0] and captureCoordinates[1] >= preyCoordinates[1]): # Snake Point 0 in Prey
+                isCaptured = True
+            elif (captureCoordinates[2] >= preyCoordinates[0] and captureCoordinates[3] >= preyCoordinates[1]) and (captureCoordinates[2] <= preyCoordinates[2] and captureCoordinates[3] <= preyCoordinates[3]): # Snake Point 1 in Prey
+                isCaptured = True
+            # Checks if Prey Coordinates are in Snake Coordinates (Instance where Snake could be much larger than Prey)
+            elif (preyCoordinates[2] >= captureCoordinates[0] and preyCoordinates[3] >= captureCoordinates[1]) and (preyCoordinates[2] <= captureCoordinates[2] and preyCoordinates[3] <= captureCoordinates[3]): # Prey Point 0 in Snake
+                isCaptured = True
+            elif (preyCoordinates[0] <= captureCoordinates[2] and preyCoordinates[1] <= captureCoordinates[3]) and (preyCoordinates[0] >= captureCoordinates[0] and preyCoordinates[1] >= captureCoordinates[1]): # Prey Point 1 in Snake
+                isCaptured = True
+            return isCaptured
+
+        def moveSnake(isPreyCaptured: bool, newCoordinates: list[tuple]) -> None:
+            self.locks["move"].acquire()
+            if isPreyCaptured:
+                self.snakeCoordinates = [*self.snakeCoordinates, newCoordinates] # Append New Snake Head
+            else:
+                self.snakeCoordinates = [*self.snakeCoordinates[1:], newCoordinates] # Move Snake
+            self.locks["move"].release()
+
+        def incrementScore() -> None:
+            self.locks["score"].acquire()
+            self.score += 1
+            self.locks["score"].release()
 
         NewSnakeCoordinates = self.calculateNewCoordinates()
-        self.isGameOver(NewSnakeCoordinates)
 
-        captureCoordinates = (
-            NewSnakeCoordinates[0] - SNAKE_ICON_WIDTH // 2, # x0
-            NewSnakeCoordinates[1] - SNAKE_ICON_WIDTH // 2, # y0
-            NewSnakeCoordinates[0] + SNAKE_ICON_WIDTH // 2, # x1
-            NewSnakeCoordinates[1] + SNAKE_ICON_WIDTH // 2 # y1
+        lost_thread = threading.Thread(
+            target = self.isGameOver,
+            args = (NewSnakeCoordinates, ),
+            daemon = True # Kill Thread When Spawning Thread Exits
         )
+        lost_thread.start()
 
-        isCaptured: bool = False
-        # Checks if Snake Coordinates are in Prey Coordinates (Instance where Prey could be much larger than Snake)
-        if (captureCoordinates[0] <= self.preyCoordinates[2] and captureCoordinates[1] <= self.preyCoordinates[3]) and (captureCoordinates[0] >= self.preyCoordinates[0] and captureCoordinates[1] >= self.preyCoordinates[1]): # Snake Point 0 in Prey
-            isCaptured = True
-        elif (captureCoordinates[2] >= self.preyCoordinates[0] and captureCoordinates[3] >= self.preyCoordinates[1]) and (captureCoordinates[2] <= self.preyCoordinates[2] and captureCoordinates[3] <= self.preyCoordinates[3]): # Snake Point 1 in Prey
-            isCaptured = True
-        # Checks if Prey Coordinates are in Snake Coordinates (Instance where Snake could be much larger than Prey)
-        elif (self.preyCoordinates[2] >= captureCoordinates[0] and self.preyCoordinates[3] >= captureCoordinates[1]) and (self.preyCoordinates[2] <= captureCoordinates[2] and self.preyCoordinates[3] <= captureCoordinates[3]): # Prey Point 0 in Snake
-            isCaptured = True
-        elif (self.preyCoordinates[0] <= captureCoordinates[2] and self.preyCoordinates[1] <= captureCoordinates[3]) and (self.preyCoordinates[0] >= captureCoordinates[0] and self.preyCoordinates[1] >= captureCoordinates[1]): # Prey Point 1 in Snake
-            isCaptured = True
+        preyCaptured: bool = isCaptured(NewSnakeCoordinates)
+        move_thread = threading.Thread(
+            target = moveSnake,
+            kwargs = {
+                "isPreyCaptured" : preyCaptured,
+                "newCoordinates" : NewSnakeCoordinates,
+            },
+            daemon = True # Kill Thread When Spawning Thread Exits
+        )
+        move_thread.start()
 
-        if isCaptured:
-            self.read.acquire()
-            self.snakeCoordinates: list = [*self.snakeCoordinates, NewSnakeCoordinates] # Append New Snake Head
-            self.preyCoordinates: tuple = self.createNewPrey()
-            self.score += 1
-            self.read.release()
-        else:
-            self.read.acquire()
-            self.snakeCoordinates: list = [*self.snakeCoordinates[1:], NewSnakeCoordinates] # Move Snake
-            self.read.release()
-        self.full.release()
+        if preyCaptured:
+            prey_thread = threading.Thread(
+                target = self.createNewPrey,
+            )
+            score_thread = threading.Thread(
+                target = incrementScore,
+            )
+            prey_thread.start()
+            score_thread.start()
 
     def updateGUI(self, gui: Gui) -> None:
         '''
@@ -171,17 +211,31 @@ class Game():
             If the queue.empty exception happens, it schedules
             to call itself after a short delay.
         '''
-        while True:
-            self.full.acquire()
+        def updateSnakeGUI() -> None:
+            self.locks["move"].acquire()
+            gui.canvas.coords(gui.snakeIcon, *[coord for point in self.snakeCoordinates for coord in point])
+            self.locks["move"].release()
+        def updatePreyGUI() -> None:
+            self.locks["prey"].acquire()
+            gui.canvas.coords(gui.preyIcon, *self.preyCoordinates)
+            self.locks["prey"].release()
+        def updateScoreGUI() -> None:
+            self.locks["score"].acquire()
+            gui.canvas.itemconfigure(gui.score, text=f"Your Score: {game.score}")
+            self.locks["score"].release()
 
-            self.read.acquire()
-            if self.gameNotOver:
-                gui.canvas.coords(gui.snakeIcon, *[coord for point in self.snakeCoordinates for coord in point])
-                gui.canvas.coords(gui.preyIcon, *self.preyCoordinates)
-                gui.canvas.itemconfigure(gui.score, text=f"Your Score: {game.score}")
+        gameNotOver: bool = True
+        while gameNotOver:
+            self.locks["game_over"].acquire()
+            gameNotOver: bool = self.gameNotOver # Read Game State
+            self.locks["game_over"].release()
+
+            if gameNotOver:
+                updateSnakeGUI()
+                updatePreyGUI()
+                updateScoreGUI()
             else:
                 gui.gameOver()
-            self.read.release()
 
     def calculateNewCoordinates(self) -> tuple:
         """
@@ -192,7 +246,11 @@ class Game():
             head of the snake.
             It is used by the move() method.
         """
-        lastX, lastY = self.snakeCoordinates[-1]
+
+        self.locks["move"].acquire()
+        lastX, lastY = self.snakeCoordinates[-1] # Read Snake Coordinates for Processing
+        self.locks["move"].release()
+
         #complete the method implementation below
         if self.direction == "Left":
             lastX -= SNAKE_ICON_WIDTH
@@ -219,12 +277,12 @@ class Game():
         y_collision: bool = (y <= 0) or (y >= WINDOW_HEIGHT)
 
         if (x_collision) or (y_collision) or ((x, y) in self.snakeCoordinates[:-1]):
-            self.read.acquire()
+            self.locks["game_over"].acquire()
             self.gameNotOver = False
-            self.read.release()
-            return
+            self.locks["game_over"].release()
+        return
 
-    def createNewPrey(self) -> tuple:
+    def createNewPrey(self) -> None:
         """
             This methods picks an x and a y randomly as the coordinate
             of the new prey and uses that to calculate the
@@ -238,12 +296,15 @@ class Game():
         THRESHOLD = 15
 
         generatedCoordinates: tuple = (random.randint(THRESHOLD, WINDOW_WIDTH - THRESHOLD), random.randint(THRESHOLD, WINDOW_HEIGHT - THRESHOLD))
-        return (
+
+        self.locks["prey"].acquire()
+        self.preyCoordinates = (
             generatedCoordinates[0] - PREY_ICON_WIDTH // 2, # x0
             generatedCoordinates[1] - PREY_ICON_WIDTH // 2, # y0
             generatedCoordinates[0] + PREY_ICON_WIDTH // 2, # x1
             generatedCoordinates[1] + PREY_ICON_WIDTH // 2 # y1
         )
+        self.locks["prey"].release()
 
 
 if __name__ == "__main__":
