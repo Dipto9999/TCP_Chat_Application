@@ -323,6 +323,7 @@ if __name__ == "__main__":
 
     #start a thread with the main loop of the game
     threading.Thread(target = game.superloop, daemon = True).start()
+    #TODO -> Ask Professor if Alright to Update GUI Concurrently Outside Main Thread
     threading.Thread(target = game.updateGUI, args = {gui, }, daemon = True).start()
 
     #start the GUI's own event loop
