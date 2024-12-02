@@ -171,33 +171,14 @@ class Game():
 
         NewSnakeCoordinates = self.calculateNewCoordinates()
 
-        lost_thread = threading.Thread(
-            target = self.isGameOver,
-            args = (NewSnakeCoordinates, ),
-            daemon = True # Kill Thread When Spawning Thread Exits
-        )
-        lost_thread.start()
+        self.isGameOver(NewSnakeCoordinates)
 
         preyCaptured: bool = isCaptured(NewSnakeCoordinates)
-        move_thread = threading.Thread(
-            target = moveSnake,
-            kwargs = {
-                "isPreyCaptured" : preyCaptured,
-                "newCoordinates" : NewSnakeCoordinates,
-            },
-            daemon = True # Kill Thread When Spawning Thread Exits
-        )
-        move_thread.start()
+        moveSnake(isPreyCaptured = preyCaptured, newCoordinates = NewSnakeCoordinates)
 
         if preyCaptured:
-            prey_thread = threading.Thread(
-                target = self.createNewPrey,
-            )
-            score_thread = threading.Thread(
-                target = incrementScore,
-            )
-            prey_thread.start()
-            score_thread.start()
+            self.createNewPrey()
+            incrementScore()
 
     def updateGUI(self, gui: Gui) -> None:
         '''
