@@ -4,6 +4,16 @@
 """
     This program implements a variety of the snake
     game (https://en.wikipedia.org/wiki/Snake_(video_game_genre))
+
+    The model of Inter-Process Communication (IPC) implemented has been changed from message passing to shared-memory.
+    Similar to Labs 5 & 6, we are using mutexes (i.e. locks in a dict) to protect read-write access to the memory instead of the `queue`
+    from the original design.
+
+    This entails 2 threads for the GUI and Game in a reader-writer synchronization problem. Access to the 4 values (i.e. game_over, score, prey, move)
+    is protected by a critical section. This is updated with logic in the Game class, and read to render the state of the GUI. Note that GUI access has
+    been designed to have non-blocking mutex acquires. If a certain lock from the dict cannot be acquired (i.e. data being written to when context-switch occurs), it is
+    momentarily skipped in favor of updating other GUI components. This is done in a forever loop (i.e. until game is over) to behave identically to the queue in the original
+    program design.
 """
 
 import threading
