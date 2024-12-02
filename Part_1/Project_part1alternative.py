@@ -156,7 +156,7 @@ class Game():
                 isCaptured = True
             return isCaptured
 
-        def moveSnake(isPreyCaptured: bool, newCoordinates: list[tuple]) -> None:
+        def moveSnake(isPreyCaptured: bool, newCoordinates: tuple) -> None:
             self.locks["move"].acquire()
             if isPreyCaptured:
                 self.snakeCoordinates = [*self.snakeCoordinates, newCoordinates] # Append New Snake Head
