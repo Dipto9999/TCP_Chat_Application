@@ -193,23 +193,23 @@ class Game():
             to call itself after a short delay.
         '''
         def updateSnakeGUI() -> None:
-            self.locks["move"].acquire()
-            gui.canvas.coords(gui.snakeIcon, *[coord for point in self.snakeCoordinates for coord in point])
-            self.locks["move"].release()
+            if self.locks["move"].acquire(blocking = False):
+                gui.canvas.coords(gui.snakeIcon, *[coord for point in self.snakeCoordinates for coord in point])
+                self.locks["move"].release()
         def updatePreyGUI() -> None:
-            self.locks["prey"].acquire()
-            gui.canvas.coords(gui.preyIcon, *self.preyCoordinates)
-            self.locks["prey"].release()
+            if self.locks["prey"].acquire(blocking = False):
+                gui.canvas.coords(gui.preyIcon, *self.preyCoordinates)
+                self.locks["prey"].release()
         def updateScoreGUI() -> None:
-            self.locks["score"].acquire()
-            gui.canvas.itemconfigure(gui.score, text=f"Your Score: {game.score}")
-            self.locks["score"].release()
+            if self.locks["score"].acquire(blocking = False):
+                gui.canvas.itemconfigure(gui.score, text=f"Your Score: {game.score}")
+                self.locks["score"].release()
 
         gameNotOver: bool = True
         while gameNotOver:
-            self.locks["game_over"].acquire()
-            gameNotOver: bool = self.gameNotOver # Read Game State
-            self.locks["game_over"].release()
+            if self.locks["game_over"].acquire(blocking = False):
+                gameNotOver: bool = self.gameNotOver # Read Game State
+                self.locks["game_over"].release()
 
             if gameNotOver:
                 updateSnakeGUI()
