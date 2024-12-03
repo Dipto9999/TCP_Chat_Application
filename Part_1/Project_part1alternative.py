@@ -94,7 +94,7 @@ class Game():
         self.gameNotOver = True
         self.score: int = 0
 
-        self.createNewPrey() # Generate First Prey
+        self.preyCoordinates: list = self.createNewPrey() # Generate First Prey
 
 
     def superloop(self) -> None:
@@ -142,10 +142,6 @@ class Game():
             and position) should be correctly updated.
         """
         def isCaptured(snakeCoordinates) -> bool:
-            self.locks["prey"].acquire()
-            preyCoordinates: tuple = self.preyCoordinates # Read Prey Coordinates for Processing
-            self.locks["prey"].release()
-
             captureCoordinates = (
                 snakeCoordinates[0] - SNAKE_ICON_WIDTH // 2, # x0
                 snakeCoordinates[1] - SNAKE_ICON_WIDTH // 2, # y0
@@ -153,18 +149,29 @@ class Game():
                 snakeCoordinates[1] + SNAKE_ICON_WIDTH // 2 # y1
             )
 
-            isCaptured: bool = False
+            self.locks["prey"].acquire()
+            preyCoordinates: list = self.preyCoordinates.copy() # Read Prey Coordinates for Processing
+            self.locks["prey"].release()
+
+            captured: bool = False
             # Checks if Snake Coordinates are in Prey Coordinates (Instance where Prey could be much larger than Snake)
             if (captureCoordinates[0] <= preyCoordinates[2] and captureCoordinates[1] <= preyCoordinates[3]) and (captureCoordinates[0] >= preyCoordinates[0] and captureCoordinates[1] >= preyCoordinates[1]): # Snake Point 0 in Prey
-                isCaptured = True
+                captured = True
             elif (captureCoordinates[2] >= preyCoordinates[0] and captureCoordinates[3] >= preyCoordinates[1]) and (captureCoordinates[2] <= preyCoordinates[2] and captureCoordinates[3] <= preyCoordinates[3]): # Snake Point 1 in Prey
-                isCaptured = True
+                captured = True
             # Checks if Prey Coordinates are in Snake Coordinates (Instance where Snake could be much larger than Prey)
             elif (preyCoordinates[2] >= captureCoordinates[0] and preyCoordinates[3] >= captureCoordinates[1]) and (preyCoordinates[2] <= captureCoordinates[2] and preyCoordinates[3] <= captureCoordinates[3]): # Prey Point 0 in Snake
-                isCaptured = True
+                captured = True
             elif (preyCoordinates[0] <= captureCoordinates[2] and preyCoordinates[1] <= captureCoordinates[3]) and (preyCoordinates[0] >= captureCoordinates[0] and preyCoordinates[1] >= captureCoordinates[1]): # Prey Point 1 in Snake
-                isCaptured = True
-            return isCaptured
+                captured = True
+
+            if captured:
+                self.locks["prey"].acquire()
+                self.preyCoordinates = self.createNewPrey()
+                self.locks["prey"].release()
+
+                incrementScore()
+            return captured
 
         def moveSnake(isPreyCaptured: bool, newCoordinates: tuple) -> None:
             self.locks["move"].acquire()
@@ -186,10 +193,6 @@ class Game():
         preyCaptured: bool = isCaptured(NewSnakeCoordinates)
         moveSnake(isPreyCaptured = preyCaptured, newCoordinates = NewSnakeCoordinates)
 
-        if preyCaptured:
-            self.createNewPrey()
-            incrementScore()
-
     def updateGUI(self, gui: Gui) -> None:
         '''
             This method handles the queue by constantly retrieving
@@ -203,21 +206,21 @@ class Game():
             to call itself after a short delay.
         '''
         def updateSnakeGUI() -> None:
-            if self.locks["move"].acquire(blocking = False):
-                gui.canvas.coords(gui.snakeIcon, *[coord for point in self.snakeCoordinates for coord in point])
-                self.locks["move"].release()
+            self.locks["move"].acquire()
+            gui.canvas.coords(gui.snakeIcon, *[coord for point in self.snakeCoordinates for coord in point])
+            self.locks["move"].release()
         def updatePreyGUI() -> None:
-            if self.locks["prey"].acquire(blocking = False):
-                gui.canvas.coords(gui.preyIcon, *self.preyCoordinates)
-                self.locks["prey"].release()
+            self.locks["prey"].acquire()
+            gui.canvas.coords(gui.preyIcon, *self.preyCoordinates)
+            self.locks["prey"].release()
         def updateScoreGUI() -> None:
-            if self.locks["score"].acquire(blocking = False):
-                gui.canvas.itemconfigure(gui.score, text=f"Your Score: {game.score}")
-                self.locks["score"].release()
+            self.locks["score"].acquire()
+            gui.canvas.itemconfigure(gui.score, text=f"Your Score: {game.score}")
+            self.locks["score"].release()
 
         gameNotOver: bool = True
         while gameNotOver:
-            if self.locks["game_over"].acquire(blocking = False):
+            if self.locks["game_over"].acquire():
                 gameNotOver: bool = self.gameNotOver # Read Game State
                 self.locks["game_over"].release()
 
@@ -273,7 +276,7 @@ class Game():
             self.locks["game_over"].release()
         return
 
-    def createNewPrey(self) -> None:
+    def createNewPrey(self) -> list:
         """
             This methods picks an x and a y randomly as the coordinate
             of the new prey and uses that to calculate the
@@ -288,14 +291,12 @@ class Game():
 
         generatedCoordinates: tuple = (random.randint(THRESHOLD, WINDOW_WIDTH - THRESHOLD), random.randint(THRESHOLD, WINDOW_HEIGHT - THRESHOLD))
 
-        self.locks["prey"].acquire()
-        self.preyCoordinates = (
+        return [
             generatedCoordinates[0] - PREY_ICON_WIDTH // 2, # x0
             generatedCoordinates[1] - PREY_ICON_WIDTH // 2, # y0
             generatedCoordinates[0] + PREY_ICON_WIDTH // 2, # x1
             generatedCoordinates[1] + PREY_ICON_WIDTH // 2 # y1
-        )
-        self.locks["prey"].release()
+        ]
 
 
 if __name__ == "__main__":
