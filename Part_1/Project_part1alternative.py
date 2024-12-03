@@ -17,7 +17,6 @@
 """
 
 import threading
-import queue        #the thread-safe queue from Python standard library
 
 from tkinter import Tk, Canvas, Button
 import random, time
@@ -55,8 +54,6 @@ class Gui():
         for key in ("Left", "Right", "Up", "Down"):
             self.root.bind(f"<Key-{key}>", game.whenAnArrowKeyIsPressed)
 
-        # self.root.after(100, game.updateGUI, self)
-
     def gameOver(self):
         """
             This method is used at the end to display a
@@ -66,6 +63,51 @@ class Gui():
             height = 3, width = 10, font=("Helvetica","14","bold"),
             command=self.root.destroy)
         self.canvas.create_window(200, 100, anchor="nw", window=gameOverButton)
+
+class ComponentHandler():
+    """
+        This class implements the component handler for the game.
+    """
+    def __init__(self):
+        self.game = game
+        self.gui = gui
+        self.componentHandler()
+
+    def updateGameOverGUI(self) -> bool:
+        game.locks["game_over"].acquire()
+        gameNotOver: bool = game.gameNotOver # Read Game State
+        game.locks["game_over"].release()
+        return gameNotOver
+    def updateSnakeGUI(self) -> None:
+        game.locks["move"].acquire()
+        gui.canvas.coords(gui.snakeIcon, *[coord for point in game.snakeCoordinates for coord in point])
+        game.locks["move"].release()
+    def updatePreyGUI(self) -> None:
+        game.locks["prey"].acquire()
+        gui.canvas.coords(gui.preyIcon, *game.preyCoordinates)
+        game.locks["prey"].release()
+    def updateScoreGUI(self) -> None:
+        game.locks["score"].acquire()
+        gui.canvas.itemconfigure(gui.score, text=f"Your Score: {game.score}")
+        game.locks["score"].release()
+
+    def componentHandler(self):
+        '''
+            This method handles the state by constantly retrieving
+            data from the game and accordingly taking the corresponding
+            action.
+            A task could be: game_over, move, prey, score.
+            Each data item
+            If the loop has executed, it schedules
+            to call itself after a short delay.
+        '''
+        if self.updateGameOverGUI():
+            self.updateSnakeGUI()
+            self.updatePreyGUI()
+            self.updateScoreGUI()
+            self.gui.root.after(100, self.componentHandler)  # Schedule the next update
+        else:
+            self.gui.gameOver()
 
 class Game():
     '''
@@ -313,10 +355,12 @@ if __name__ == "__main__":
     game = Game()        #instantiate the game object
     gui = Gui()    #instantiate the game user interface
 
+    handler = ComponentHandler() #instantiate the component handler
+
     #start a thread with the main loop of the game
     threading.Thread(target = game.superloop, daemon = True).start()
     #TODO -> Ask Professor if Alright to Update GUI Concurrently Outside Main Thread
-    threading.Thread(target = game.updateGUI, args = {gui, }, daemon = True).start()
+    # threading.Thread(target = game.updateGUI, args = {gui, }, daemon = True).start()
 
     #start the GUI's own event loop
     gui.root.mainloop()
