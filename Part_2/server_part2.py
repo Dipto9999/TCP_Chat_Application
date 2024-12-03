@@ -28,14 +28,16 @@ class ChatServer:
         self.window.geometry("400x400")
         self.window.title("Chat Server")
 
-        # Define and Configure Widgets
+        # Define Label Widgets
         self.server_label = Label(self.window, text = "Chat Server", font = ("Helvetica", 12, "normal"))
         self.history_label = Label(self.window, text = "Chat History:", font = ("Helvetica", 12, "normal"))
 
+        # Define Chat History With Scrollbar
         self.scrollbar = Scrollbar(window, orient = VERTICAL)
         self.chat_history = Text(self.window, yscrollcommand = self.scrollbar.set, state = DISABLED) # User Has Read-Only Access
         self.scrollbar.config(command = self.chat_history.yview)
 
+        # Place Widgets with Grid Manager
         self.server_label.grid(row = 1, column = 1, sticky = W)
         self.history_label.grid(row = 2, column = 1, sticky = W)
         self.chat_history.grid(row = 3, column = 1, columnspan = 3, sticky = NSEW)
@@ -51,7 +53,7 @@ class ChatServer:
         self.window.grid_columnconfigure(3, weight = 1) # Will Grow Proportionally
         self.window.grid_columnconfigure(4, weight = 0) # Won't Grow
 
-        # Establish Client Connection(s)
+        # Establish Client Connection(s) in New Thread.
         self.lock = threading.Lock()
         self.socketInfo: list[dict] = []
         self.msg_threads: list[threading.Thread] = []
@@ -62,20 +64,23 @@ class ChatServer:
         )
         self.handshake_thread.start()
 
-        #TODO -> Document Exit Conditions
-        # Close Sockets After Tkinter Window Closed.
+        # Intercept the Close Button (Documented at "https://tkdocs.com/tutorial/windows.html")
         self.window.protocol("WM_DELETE_WINDOW", self.exit)
 
     def exit(self) -> None:
+        """
+        This method is invoked when the close button is clicked.
+        """
+
         self.lock.acquire() # Critical Section (Start)
-        readInfo: list[dict] = self.socketInfo.copy()
+        readInfo: list[dict] = self.socketInfo.copy() # Copy List of Sockets for Sending
         self.lock.release() # Critical Section (End)
 
         staleInfo: list[dict] = []
         for info in readInfo:
             try:
                 info["socket"].send("Server Offline".encode())
-                info["socket"].close()
+                info["socket"].close() # Close Sockets When Tkinter Window Closed.
             except socket.error:
                 staleInfo.append(info) # Remove Info
             finally:
@@ -84,16 +89,23 @@ class ChatServer:
         for info in staleInfo:
             self.lock.acquire() # Critical Section (Start)
             if info in self.socketInfo:
-                self.socketInfo.remove(info)
+                self.socketInfo.remove(info) # Remove Stale Socket Info
             self.lock.release() # Critical Section (End)
 
+        #TODO -> Determine if Need to Close Client and Server Sockets.
         self.window.destroy()
-        self.serverSocket.close()
+        self.serverSocket.close() # Close Socket When Tkinter Window Closed.
 
     def accept_clients(self, buffersize) -> None:
+        """
+        Accepts new client sockets which wish to connect to the server port.
+        Spawns a thread for receiving messages if connection successfully established, otherwise exits.
+        """
+
         # Enable Server to Accept Connections.
         self.serverSocket.listen(ChatServer.EXPECTED_CLIENTS)
         # print("Server Listening for Incoming Connection Request(s) ...")
+
         while True: # Infinite Loop Until Server Cannot Accept New Clients
             clientSocket: dict = {}
             try:
@@ -103,7 +115,7 @@ class ChatServer:
                 break
             else:
                 self.lock.acquire() # Critical Section (Start)
-                self.socketInfo.append(clientSocket)
+                self.socketInfo.append(clientSocket) # Append to List of Open Sockets
                 self.lock.release() # Critical Section (End)
 
                 client_thread = threading.Thread(
@@ -115,18 +127,24 @@ class ChatServer:
                     daemon = True # Kill Thread When Spawning Thread Exits
                 )
                 client_thread.start()
-                self.msg_threads.append(client_thread)
+                self.msg_threads.append(client_thread) # For Expansions : If Threads Need to be Accounted for.
         return
 
     def display_msg(self, msg: str) -> None:
-        self.chat_history.config(state = NORMAL)
+        """
+        This displays the msg in the self.chat_history widget.
+        """
+        self.chat_history.config(state = NORMAL) # Enable Widget to Insert Message
         self.chat_history.insert(END, f"{msg}\n")
-        self.chat_history.config(state = DISABLED)
+        self.chat_history.config(state = DISABLED) # Disable Widget (i.e. User Has Read-Only State)
 
     def handle_msgs(self, recvInfo: dict, max_bytes: int) -> None:
+        """
+        This receives messages from the specified client socket. The number of bytes to be received is indicated.
+        """
         while True: # Check if New Data Received.
             try:
-                recv_stream: bytes = recvInfo["socket"].recv(max_bytes)
+                recv_stream: bytes = recvInfo["socket"].recv(max_bytes) # Receive Byte Stream
             except socket.error:
                 self.display_msg(msg = f"""Could Not Receive from Client @PORT #{recvInfo["addr"][1]}...""")
                 break
@@ -137,15 +155,19 @@ class ChatServer:
         return
 
     def __send_tcp(self, msg: str) -> None:
+        """
+        Default send function via TCP.
+        """
+
         #TODO -> Ask Professor about Writer/Reader Implementation
         self.lock.acquire() # Critical Section (Start)
-        readInfo: list[dict] = self.socketInfo.copy()
+        readInfo: list[dict] = self.socketInfo.copy() # Copy List of Sockets for Sending
         self.lock.release() # Critical Section (End)
 
         staleInfo: list[dict] = []
         for info in readInfo:
             try:
-                info["socket"].send(msg.encode())
+                info["socket"].send(msg.encode()) # Send Encoded Byte Stream
             except socket.error:
                 staleInfo.append(info) # Remove Info
         self.display_msg(msg)
@@ -153,7 +175,7 @@ class ChatServer:
         for info in staleInfo:
             self.lock.acquire() # Critical Section (Start)
             if info in self.socketInfo:
-                self.socketInfo.remove(info)
+                self.socketInfo.remove(info) # Remove Stale Socket Info
             self.lock.release() # Critical Section (End)
 def main(): #Note that the main function is outside the ChatServer class
     window = Tk()
