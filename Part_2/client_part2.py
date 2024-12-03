@@ -81,16 +81,19 @@ class ChatClient:
         self.window.destroy()
 
     def conn_tcp(self) -> None:
+        """
+        This method tries to establish TCP connection with Server Port. Display Connection status and server port #.
+        """
         try: # Try to Establish TCP Connection with Server Port
             self.clientSocket = socket.socket(family = socket.AF_INET, type = socket.SOCK_STREAM)
             self.clientSocket.connect((self.host, self.serverPort))
         except socket.error: # Notify User When Connection Failed and Enable Ability to Reconnect.
             self.conn_btn.config(state = NORMAL) # Enable Button When Connection has Failed
             self.display_msg("Connection Failed!")
-            self.window.title(f"{self.process_name} Disconnected") # Display State in Window Title
+            self.window.title(f"{self.process_name} Disconnected From Server @PORT #{self.serverPort}!") # Display State in Window Title
         else: # Continue With Expected Functionality
             self.conn_btn.config(state = DISABLED) # Disable Button When Connection has Succeeded
-            self.display_msg("Connection Successful!")
+            self.display_msg(f"Connection Successful With Server @PORT #{self.serverPort}!")
             self.window.title(f"{self.process_name} @PORT #{self.clientSocket.getsockname()[1]}") # Display Process Name in Window Title
 
             # Create New Thread to Receive Messages from Server.
@@ -136,19 +139,19 @@ class ChatClient:
                 if recv_stream:
                     new_msg: str = recv_stream.decode() # Decode to String
                     self.display_msg(msg = new_msg, sentByMe = self.process_name in new_msg)
-        self.display_msg(msg = "Could Not Receive from Server...", sentByMe = False)
+        # self.display_msg(msg = f"Recv Failed from Server @PORT #{self.serverPort}!", sentByMe = False)
         self.window.title(f"{self.process_name} Disconnected") # Display State in Window Title
         return
 
     def __send_tcp(self, msg: str) -> None:
         """
-        Default send function via TCP.
+        Default send method via TCP.
         """
         try:
             self.clientSocket.send(msg.encode()) # Send New Message Stream
         except socket.error:
             self.conn_btn.config(state = NORMAL) # Enable Button When Connection has Failed
-            self.display_msg(msg = "Lost Connection to Server!", sentByMe = False)
+            self.display_msg(msg = f"Lost Connection with Server @PORT #{self.serverPort}!", sentByMe = False)
 
 def main(): #Note that the main function is outside the ChatClient class
     window = Tk()

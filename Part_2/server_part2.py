@@ -19,6 +19,9 @@ class ChatServer:
     """
     EXPECTED_CLIENTS = 5 # Number of Connection Requests Which Can Be in Backlog
     def __init__(self, window: Tk, host: str = "127.0.0.1", serverPort: int = 3234, buffersize: int = 1024):
+        # Data Fields for Server-Client Communication Configuration
+        self.host, self.serverPort = host, serverPort
+
         # TCP Server Setup
         self.serverSocket = socket.socket(family = socket.AF_INET, type = socket.SOCK_STREAM)
         self.serverSocket.bind((host, serverPort))
@@ -26,7 +29,7 @@ class ChatServer:
         # Tkinter Window Setup
         self.window = window
         self.window.geometry("400x400")
-        self.window.title("Chat Server") # Identify Server in Window Title
+        self.window.title(f"Chat Server @PORT #{self.serverPort}") # Identify Server in Window Title
 
         # Define Label Widgets
         self.server_label = Label(self.window, text = "Chat Server", font = ("Helvetica", 12, "normal"))
@@ -79,7 +82,7 @@ class ChatServer:
         staleInfo: list[dict] = []
         for info in readInfo:
             try:
-                info["socket"].send("Server Offline".encode())
+                info["socket"].send(f"Server @PORT #{self.serverPort} Offline...".encode())
                 info["socket"].close() # Close Sockets When Tkinter Window Closed.
             except socket.error:
                 staleInfo.append(info) # Remove Info
@@ -111,9 +114,11 @@ class ChatServer:
             try:
                 clientSocket["socket"], clientSocket["addr"] = self.serverSocket.accept()
             except socket.error:
-                self.display_msg(msg = f"""Could Not Establish Client Connection""")
+                self.display_msg(msg = f"""Could Not Establish Client Connection!""")
                 break
             else:
+                self.display_msg(msg = f"""Client @PORT #{clientSocket["addr"][1]} Has Connected!""")
+
                 self.lock.acquire() # Critical Section (Start)
                 self.socketInfo.append(clientSocket) # Append to List of Open Sockets
                 self.lock.release() # Critical Section (End)
