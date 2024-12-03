@@ -157,59 +157,40 @@ class Game():
             The snake coordinates list (representing its length
             and position) should be correctly updated.
         """
-    
-        def isCaptured(snakeCoordinates, preyCoordinates) -> bool:
-            
-            snake_x0 = snakeCoordinates[0] - SNAKE_ICON_WIDTH // 2
-            snake_y0 = snakeCoordinates[1] - SNAKE_ICON_WIDTH // 2
-            snake_x1 = snakeCoordinates[0] + SNAKE_ICON_WIDTH // 2
-            snake_y1 = snakeCoordinates[1] + SNAKE_ICON_WIDTH // 2
 
+        def isCaptured(snakeCoordinates, preyCoordinates) -> bool:
+            captureCoordinates = (
+                snakeCoordinates[0] - SNAKE_ICON_WIDTH // 2, # x0
+                snakeCoordinates[1] - SNAKE_ICON_WIDTH // 2, # y0
+                snakeCoordinates[0] + SNAKE_ICON_WIDTH // 2, # x1
+                snakeCoordinates[1] + SNAKE_ICON_WIDTH // 2 # y1
+            )
+
+            isCaptured: bool = False
             # Checks if Snake Coordinates are in Prey Coordinates (Instance where Prey could be much larger than Snake)
-            if (snake_x0 <= preyCoordinates[2] and snake_y0 <= preyCoordinates[3] and snake_x0 >= preyCoordinates[0] and snake_y0 >= preyCoordinates[1]) or (snake_x1 >= preyCoordinates[0] and snake_y1 >= preyCoordinates[1] and snake_x1 <= preyCoordinates[2] and snake_y1 <= preyCoordinates[3]):
-                return True
+            if (captureCoordinates[0] <= preyCoordinates[2] and captureCoordinates[1] <= preyCoordinates[3]) and (captureCoordinates[0] >= preyCoordinates[0] and captureCoordinates[1] >= preyCoordinates[1]): # Snake Point 0 in Prey
+                isCaptured = True
+            elif (captureCoordinates[2] >= preyCoordinates[0] and captureCoordinates[3] >= preyCoordinates[1]) and (captureCoordinates[2] <= preyCoordinates[2] and captureCoordinates[3] <= preyCoordinates[3]): # Snake Point 1 in Prey
+                isCaptured = True
             # Checks if Prey Coordinates are in Snake Coordinates (Instance where Snake could be much larger than Prey)
-            elif (preyCoordinates[2] >= snake_x0 and preyCoordinates[3] >= snake_y0 and preyCoordinates[2] <= snake_x1 and preyCoordinates[3] <= snake_y1) or (preyCoordinates[0] <= snake_x1 and preyCoordinates[1] <= snake_y1 and preyCoordinates[0] >= snake_x0 and preyCoordinates[1] >= snake_y0):
-                return True
-            return False
-              
+            elif (preyCoordinates[2] >= captureCoordinates[0] and preyCoordinates[3] >= captureCoordinates[1]) and (preyCoordinates[2] <= captureCoordinates[2] and preyCoordinates[3] <= captureCoordinates[3]): # Prey Point 0 in Snake
+                isCaptured = True
+            elif (preyCoordinates[0] <= captureCoordinates[2] and preyCoordinates[1] <= captureCoordinates[3]) and (preyCoordinates[0] >= captureCoordinates[0] and preyCoordinates[1] >= captureCoordinates[1]): # Prey Point 1 in Snake
+                isCaptured = True
+            return isCaptured
+
 
         NewSnakeCoordinates = self.calculateNewCoordinates()
         #complete the method implementation below
 
         if isCaptured(snakeCoordinates = NewSnakeCoordinates, preyCoordinates = gui.canvas.coords(gui.preyIcon)): # Access from GUI:
-            self.score += 1
             self.snakeCoordinates = [*self.snakeCoordinates, NewSnakeCoordinates] # Append New Snake Head
 
-            #TODO -> No Threading in Part 1
-            # score_thread = threading.Thread(
-            #     target = gameQueue.put_nowait,
-            #     args = ({"score" : self.score}, ),
-            #     daemon = True # Kill Thread When Spawning Thread Exits
-            # )
-            # prey_thread = threading.Thread(
-            #     target = self.createNewPrey,
-            #     daemon = True # Kill Thread When Spawning Thread Exits
-            # )
-            # score_thread.start()
-            # prey_thread.start()
-
+            self.score += 1
             gameQueue.put_nowait({"score" : self.score})
             self.createNewPrey()
         else:
             self.snakeCoordinates = [*self.snakeCoordinates[1:], NewSnakeCoordinates] # Move Snake
-        # lost_thread = threading.Thread(
-        #     target = self.isGameOver,
-        #     args = (NewSnakeCoordinates, ),
-        #     daemon = True # Kill Thread When Spawning Thread Exits
-        # )
-        # move_thread = threading.Thread(
-        #     target = gameQueue.put_nowait,
-        #     args = ({"move" :  self.snakeCoordinates}, ),
-        #     daemon = True # Kill Thread When Spawning Thread Exits
-        # )
-        # lost_thread.start()
-        # move_thread.start()
         self.isGameOver(NewSnakeCoordinates)
         gameQueue.put_nowait({"move" :  self.snakeCoordinates})
 
@@ -251,7 +232,7 @@ class Game():
         if (x_collision) or (y_collision) or ((x, y) in self.snakeCoordinates[:-1]):
             self.gameNotOver = False
             gameQueue.put_nowait({"game_over" : True})
-            return
+        return
 
     def createNewPrey(self) -> None:
         """
