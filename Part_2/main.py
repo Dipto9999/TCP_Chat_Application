@@ -9,7 +9,7 @@ import server_part2 as server
 if __name__ == "__main__":
     server = multiprocessing.Process(target=server.main)
     server.start()
-    time.sleep(1)  #to ensure server is up and running; may be commented out or changed
+    # time.sleep(1)  #to ensure server is up and running; may be commented out or changed
 
     numberOfClients = 3  #Change this value for a different number of clients
     for count in range(1, numberOfClients+1):

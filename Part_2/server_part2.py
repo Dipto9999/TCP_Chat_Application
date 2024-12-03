@@ -26,7 +26,7 @@ class ChatServer:
         # Tkinter Window Setup
         self.window = window
         self.window.geometry("400x400")
-        self.window.title("Chat Server")
+        self.window.title("Chat Server") # Identify Server in Window Title
 
         # Define Label Widgets
         self.server_label = Label(self.window, text = "Chat Server", font = ("Helvetica", 12, "normal"))
