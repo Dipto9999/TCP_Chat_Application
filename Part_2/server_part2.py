@@ -17,7 +17,7 @@ class ChatServer:
     It uses the tkinter module to create the GUI for the server client.
     See the project info/video for the specs.
     """
-    EXPECTED_CLIENTS = 5
+    EXPECTED_CLIENTS = 5 # Number of Connection Requests Which Can Be in Backlog
     def __init__(self, window: Tk, host: str = "127.0.0.1", serverPort: int = 3234, buffersize: int = 1024):
         # TCP Server Setup
         self.serverSocket = socket.socket(family = socket.AF_INET, type = socket.SOCK_STREAM)
@@ -102,7 +102,7 @@ class ChatServer:
         Spawns a thread for receiving messages if connection successfully established, otherwise exits.
         """
 
-        # Enable Server to Accept Connections.
+        # Enable Server to Accept Connection Requests.
         self.serverSocket.listen(ChatServer.EXPECTED_CLIENTS)
         # print("Server Listening for Incoming Connection Request(s) ...")
 
