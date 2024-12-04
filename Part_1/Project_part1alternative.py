@@ -9,15 +9,17 @@
     Similar to Labs 5 & 6, we are using mutexes (i.e. locks in a dict) to protect read-write access to the memory instead of the `queue`
     from the original design.
 
-    This entails 2 threads for the GUI and Game in a reader-writer synchronization problem. Access to the 4 values (i.e. game_over, score, prey, move)
-    is protected by a critical section. This is updated with logic in the Game class, and read to render the state of the GUI. Note that GUI access has
-    been designed to have non-blocking mutex acquires. If a certain lock from the dict cannot be acquired (i.e. data being written to when context-switch occurs), it is
-    momentarily skipped in favor of updating other GUI components. This is done in a forever loop (i.e. until game is over) to behave identically to the queue in the original
-    program design.
+    This entails a separate thread for Game superloop in a reader-writer synchronization problem. Access to the 4 data fields (i.e. game_over, score, prey, move)
+    is protected by a critical section. This is updated with logic in the Game class, and read by the GUI class to render its state.
+
+    Note that GUI access has been designed to have non-blocking mutex acquires for all fields other than game_over (i.e. if game has not ended).
+    If a certain lock from the dict cannot be acquired (i.e. data being written to when context-switch occurs), it is momentarily skipped in favor of updating other GUI components.
+    This is done through scheduling an update every 100ms to behave similarly to the queue in the original program design.
+
+    **IMPORTANT** Tkinter is NOT thread-safe. To handle GUI updates, we use the Tk.after(...) method to achieve scheduling functionality. This is the same as in the original Part 1 design.
 """
 
 import threading
-import queue        #the thread-safe queue from Python standard library
 
 from tkinter import Tk, Canvas, Button
 import random, time
@@ -54,8 +56,42 @@ class Gui():
         #binding the arrow keys to be able to control the snake
         for key in ("Left", "Right", "Up", "Down"):
             self.root.bind(f"<Key-{key}>", game.whenAnArrowKeyIsPressed)
+        self.update()
 
-        # self.root.after(100, game.updateGUI, self)
+    def update(self):
+        '''
+            This method handles the state by trying to retrieve
+            data from the game and accordingly taking the corresponding
+            action. These include : game_over, move, prey, score.
+            Before exiting, this method schedules to call itself after a short delay.
+
+            For general gameplay, non-blocking acquires are used to update the GUI. For these to be updated,
+            it must be confirmed that the game is not over.
+        '''
+        def updateSnake() -> None:
+            if game.locks["move"].acquire(blocking = False):
+                self.canvas.coords(self.snakeIcon, *[coord for point in game.snakeCoordinates for coord in point])
+                game.locks["move"].release()
+        def updatePrey() -> None:
+            if game.locks["prey"].acquire(blocking = False):
+                self.canvas.coords(self.preyIcon, *game.preyCoordinates)
+                game.locks["prey"].release()
+        def updateScore() -> None:
+            if game.locks["score"].acquire(blocking = False):
+                self.canvas.itemconfigure(self.score, text=f"Your Score: {game.score}")
+                game.locks["score"].release()
+
+        game.locks["game_over"].acquire()
+        gameNotOver: bool = game.gameNotOver # Read Game State
+        game.locks["game_over"].release()
+
+        if gameNotOver:
+            updateSnake()
+            updatePrey()
+            updateScore()
+            self.root.after(100, self.update) # Call Function Every 100 ms
+        else:
+            self.gameOver()
 
     def gameOver(self):
         """
@@ -95,7 +131,6 @@ class Game():
         self.score: int = 0
 
         self.createNewPrey() # Generate First Prey
-
 
     def superloop(self) -> None:
         """
@@ -190,44 +225,6 @@ class Game():
             self.createNewPrey()
             incrementScore()
 
-    def updateGUI(self, gui: Gui) -> None:
-        '''
-            This method handles the queue by constantly retrieving
-            tasks from it and accordingly taking the corresponding
-            action.
-            A task could be: game_over, move, prey, score.
-            Each item in the queue is a dictionary whose key is
-            the task type (for example, "move") and its value is
-            the corresponding task value.
-            If the queue.empty exception happens, it schedules
-            to call itself after a short delay.
-        '''
-        def updateSnakeGUI() -> None:
-            if self.locks["move"].acquire(blocking = False):
-                gui.canvas.coords(gui.snakeIcon, *[coord for point in self.snakeCoordinates for coord in point])
-                self.locks["move"].release()
-        def updatePreyGUI() -> None:
-            if self.locks["prey"].acquire(blocking = False):
-                gui.canvas.coords(gui.preyIcon, *self.preyCoordinates)
-                self.locks["prey"].release()
-        def updateScoreGUI() -> None:
-            if self.locks["score"].acquire(blocking = False):
-                gui.canvas.itemconfigure(gui.score, text=f"Your Score: {game.score}")
-                self.locks["score"].release()
-
-        gameNotOver: bool = True
-        while gameNotOver:
-            if self.locks["game_over"].acquire(blocking = False):
-                gameNotOver: bool = self.gameNotOver # Read Game State
-                self.locks["game_over"].release()
-
-            if gameNotOver:
-                updateSnakeGUI()
-                updatePreyGUI()
-                updateScoreGUI()
-            else:
-                gui.gameOver()
-
     def calculateNewCoordinates(self) -> tuple:
         """
             This method calculates and returns the new
@@ -297,25 +294,18 @@ class Game():
         )
         self.locks["prey"].release()
 
-
 if __name__ == "__main__":
     #some constants for our GUI
     WINDOW_WIDTH = 500
     WINDOW_HEIGHT = 300
     SNAKE_ICON_WIDTH = 15
-    PREY_ICON_WIDTH = 10
-    #add the specified constant PREY_ICON_WIDTH here
+    PREY_ICON_WIDTH = 10 # add the specified constant PREY_ICON_WIDTH here
 
-    BACKGROUND_COLOUR = "black"   #you may change this colour if you wish
-    ICON_COLOUR = "blue"        #you may change this colour if you wish
+    BACKGROUND_COLOUR = "black" # you may change this colour if you wish
+    ICON_COLOUR = "blue"        # you may change this colour if you wish
 
-    game = Game()        #instantiate the game object
-    gui = Gui()    #instantiate the game user interface
+    game = Game() # instantiate the game object
+    gui = Gui() # instantiate the game user interface
 
-    #start a thread with the main loop of the game
-    threading.Thread(target = game.superloop, daemon = True).start()
-    #TODO -> Ask Professor if Alright to Update GUI Concurrently Outside Main Thread
-    threading.Thread(target = game.updateGUI, args = {gui, }, daemon = True).start()
-
-    #start the GUI's own event loop
-    gui.root.mainloop()
+    threading.Thread(target = game.superloop, daemon = True).start() # start a thread with the superloop of the game
+    gui.root.mainloop() # start the GUI's own event loop
