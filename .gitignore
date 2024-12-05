@@ -1,7 +1,7 @@
 *.pyc
-*.aux
-*.fdb.latexmk
-*.fls
-*.log
-*.out
-*.gz
+Documentation/*.aux
+Documentation/*.fdb.latexmk
+Documentation/*.fls
+Documentation/*.log
+Documentation/*.out
+Documentation/*.gz
