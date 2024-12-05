@@ -167,18 +167,17 @@ class Game():
             )
 
             isCaptured: bool = False
-            # Checks if Snake Coordinates are in Prey Coordinates (Instance where Prey could be much larger than Snake)
-            if (captureCoordinates[0] <= preyCoordinates[2] and captureCoordinates[1] <= preyCoordinates[3]) and (captureCoordinates[0] >= preyCoordinates[0] and captureCoordinates[1] >= preyCoordinates[1]): # Snake Point 0 in Prey
+            # Checks if Snake Coordinates are in Prey Coordinates (instance where Prey could be much larger than Snake)
+            if (captureCoordinates[0] <= preyCoordinates[2] and captureCoordinates[1] <= preyCoordinates[3]) and (captureCoordinates[0] >= preyCoordinates[0] and captureCoordinates[1] >= preyCoordinates[1]): # Snake Point 0 "inside" Prey
                 isCaptured = True
-            elif (captureCoordinates[2] >= preyCoordinates[0] and captureCoordinates[3] >= preyCoordinates[1]) and (captureCoordinates[2] <= preyCoordinates[2] and captureCoordinates[3] <= preyCoordinates[3]): # Snake Point 1 in Prey
+            elif (captureCoordinates[2] >= preyCoordinates[0] and captureCoordinates[3] >= preyCoordinates[1]) and (captureCoordinates[2] <= preyCoordinates[2] and captureCoordinates[3] <= preyCoordinates[3]): # Snake Point 1 "inside" Prey
                 isCaptured = True
-            # Checks if Prey Coordinates are in Snake Coordinates (Instance where Snake could be much larger than Prey)
-            elif (preyCoordinates[2] >= captureCoordinates[0] and preyCoordinates[3] >= captureCoordinates[1]) and (preyCoordinates[2] <= captureCoordinates[2] and preyCoordinates[3] <= captureCoordinates[3]): # Prey Point 0 in Snake
+            # Checks if Prey Coordinates are in Snake Coordinates (instance where Snake could be much larger than Prey)
+            elif (preyCoordinates[2] >= captureCoordinates[0] and preyCoordinates[3] >= captureCoordinates[1]) and (preyCoordinates[2] <= captureCoordinates[2] and preyCoordinates[3] <= captureCoordinates[3]): # Prey Point 0 "inside" Snake
                 isCaptured = True
-            elif (preyCoordinates[0] <= captureCoordinates[2] and preyCoordinates[1] <= captureCoordinates[3]) and (preyCoordinates[0] >= captureCoordinates[0] and preyCoordinates[1] >= captureCoordinates[1]): # Prey Point 1 in Snake
+            elif (preyCoordinates[0] <= captureCoordinates[2] and preyCoordinates[1] <= captureCoordinates[3]) and (preyCoordinates[0] >= captureCoordinates[0] and preyCoordinates[1] >= captureCoordinates[1]): # Prey Point 1 "inside" Snake
                 isCaptured = True
             return isCaptured
-
 
         NewSnakeCoordinates = self.calculateNewCoordinates()
         #complete the method implementation below
@@ -247,7 +246,10 @@ class Game():
         """
         THRESHOLD = 15
 
-        generatedCoordinates: tuple = (random.randint(THRESHOLD, WINDOW_WIDTH - THRESHOLD), random.randint(THRESHOLD, WINDOW_HEIGHT - THRESHOLD))
+        generatedCoordinates: tuple = (
+            random.randint(THRESHOLD, WINDOW_WIDTH - THRESHOLD),  # Generate X Coordinate Threshold Away From Walls
+            random.randint(THRESHOLD, WINDOW_HEIGHT - THRESHOLD)  # Generate Y Coordinate Threshold Away From Walls
+        )
 
         preyCoordinates: tuple = (
             generatedCoordinates[0] - PREY_ICON_WIDTH // 2, # x0
