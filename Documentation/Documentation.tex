@@ -5,26 +5,42 @@
 \usepackage{hyperref}
 \usepackage{listings}
 
-
-
 \linespread{1}
 \setlength{\parindent}{0pt} % Disable paragraph indentation
 
-\title{Detailed Project Explanation}
-\author{Group: G6}
+\title{CPEN 333: Final Project Report}
+\author{Group G6 : Muntakim Rahman and Tomaz Zlindra}
 \date{December 6th, 2024}
 
 \begin{document}
 
 \maketitle
 
+\section{Part I : Multithreaded Game}
 
-\section{Part I}
+\subsection{Requirements and Constraints}
 
+We were provided the template with skeleton code (i.e. classes, methods with docstrings) for the implementation of the Snake Game.
+The key design structure entailed the following requirement: \\
 
+\textbf{Use Python's \textit{queue} module to ensure multi-producer, multi-consumer achieves synchronization between threads} (i.e. add \textit{dict} items to the queue for "game\_over", "score", "prey", "move"). \\
+
+To program a responsive and thread-safe Snake Game, we use the template data fields and methods for the shown interactions.
+
+\begin{figure}[H]
+    \centering
+     \includegraphics[width=0.8\textwidth]{Part_1_ClassDiagram.jpg}
+     \caption{Part 1 : Interactions Between QueueHandler, Game, Gui}
+     \label{fig:PreyCapture}
+ \end{figure}
 
 \subsection{Structure}
-The general structure for Part I was already provided. We only needed to complete the methods for the "Game" class, such as the superloop, move, calculateNewCoordinates, isGameOver and is createNewPrey methods.
+
+
+The general structure for Part I was already provided.
+
+
+We only needed to complete the methods for the "Game" class, such as the superloop, move, calculateNewCoordinates, isGameOver and is createNewPrey methods.
 
 \subsection{Implementation}
 
@@ -34,13 +50,12 @@ This method is very straightforward. It checks the direction by accessing \textt
 \subsubsection{Prey Generation}
 To generate the prey, we used the \texttt{random} library to generate a random integer for the x direction and the y direction on the Tkinter canvas. We added a small margin so the prey did not generate on or outside the edges of the window.
 \subsubsection{Prey Capture}
-One of the primary challenges we faced was implementing the prey capture logic. Since prey can spawn at any location on the Tkinter canvas, iterating through a list of tuples to compare coordinates is both resource-intensive and time-consuming. To optimize this process and eliminate the need for nested "for" loops, we calculated the corner coordinates of both the prey and the snake's head. We then checked whether any point of the snake's head fell within the prey's boundaries, as illustrated in figure \ref{fig:prey_capture}. This method works effectively when the prey is larger than the snake. In cases where the snake is significantly larger than the prey, we reversed the logic: if any point of the prey fell within the snake's boundaries, it would be counted as a collision.
+One of the primary challenges we faced was implementing the prey capture logic. Since prey can spawn at any location on the Tkinter canvas, iterating through a list of tuples to compare coordinates is both resource-intensive and time-consuming. To optimize this process and eliminate the need for nested "for" loops, we calculated the corner coordinates of both the prey and the snake's head. We then checked whether any point of the snake's head fell within the prey's boundaries, as illustrated in figure \ref{fig:PreyCapture}. This method works effectively when the prey is larger than the snake. In cases where the snake is significantly larger than the prey, we reversed the logic: if any point of the prey fell within the snake's boundaries, it would be counted as a collision.
 \begin{figure}[H]
    \centering
-    \includegraphics[width=0.6\textwidth]{prey_capture.png}
-    \caption{Prey Capture Logic}
-    \label{fig:prey_capture}
-
+    \includegraphics[width=0.6\textwidth]{PreyCapture.png}
+    \caption{Prey Capture Criteria : Edge Coordinate Of Prey/Snake Must Be Contained}
+    \label{fig:PreyCapture}
 \end{figure}
 
 This solution mitigates the amount of recursion performed, while still detecting snake and prey collision.
@@ -59,64 +74,5 @@ We checked whether the coordinates of the snake's head are outside the bounds of
 
 \subsection{Modified Approach}
 For the Part I Alternative, our one main modification to Part I was to remove the use of the QueueHandler class. This was replaced by the GUI class scheduling GUI updates every 100ms using \texttt{self.root.after(100, self.update)}. Since the GUI and move thread are performing operations simultaneously, we had to add locks to ensure data was not being modified as the changes were being updated by the GUI. The GUI processes used non-blocking locks so none of the GUI methods stalled while waiting for the move thread to either read or write the data.
-
-\section{Part II}
-\subsection{Structure}
-
-% short description of the Sequence Diagram above
-\subsection{Implementation}
-This section will only discuss the more complicated chunks of code to maintain conciseness.
-\subsubsection{Server}
-{\small \textbf{Accepting Clients}} \\
-This method is run by a thread which is being infinitely called, constantly checking for new clients or reconnecting clients. In that case, it first \texttt{.accept()}s the client socket and runs each client thread. The client threads are responsible to handle messages for each client.
-
-\
-
-{\small \textbf{Message Handling}} \\
-Each of the client threads are responsible for checking for new data. In the case there's an socket error, the thread would be killed. Otherwise it would decode the message sent by the client using \texttt{.decode(MAX\_BYTES)} method and would be sent to the TCP method to send to each of the client sockets.
-
-\
-
-{\small \textbf{Sending TCP}} \\
-The TCP is responsible to send messages from one of the clients to all the clients. Although a trivial solution would be to just use the \texttt{.send(MESSAGE)} method to each of the client sockets, this would require excessive use of the mutex lock when accessing the instance variable \texttt{self.socketInfo}, which would prohibit the client threads from operating in parallel, especially if multiple clients are sending messages simultaneously. Instead, we decided to make a copy of the \texttt{self.socketInfo} instance and using \texttt{.send()} for any online clients. In the case that one of the clients goes offline, this socket would be appended to \texttt{staleInfo} list which would remove each stale socket from the \texttt{self.socketInfo} instance. The code is shown in the snippet below.
-
-\begin{lstlisting} [language=Python, label={lst:tcp}, basicstyle=\ttfamily\tiny]
-def __send_tcp(self, msg: str) -> None:
-        self.lock.acquire() # Critical Section (Start)
-        readInfo: list[dict] = self.socketInfo.copy()
-        self.lock.release() # Critical Section (End)
-
-        staleInfo: list[dict] = []
-        for info in readInfo:
-            try:
-                info["socket"].send(msg.encode())
-            except socket.error:
-                staleInfo.append(info) # Remove Info
-        self.display_msg(msg)
-
-        for info in staleInfo:
-            self.lock.acquire() # Critical Section (Start)
-            if info in self.socketInfo:
-                self.socketInfo.remove(info)
-            self.lock.release() # Critical Section (End)
-\end{lstlisting}
-
-
-{\small \textbf{Exit}}\\
-On the server exit, first it has to close all client sockets. The logic above is used (copying the socketInfo) to send a "Server Offline" message before closing the server socket.
-
-\subsubsection{Client}
-{\small \textbf{TCP Connection}} \\
-This method is similar to the Server connection method. It first calls \texttt{.connect} to connect to the server. If there's a socket error, the Tkinter window will show the connection failure. Otherwise, it will start an infinite method to check for messages from the server.
-
-\
-
-{\small \textbf{Receive}} \\
-Again, very similar to the server's message handling, it checks for any new data, and if so, it decodes the message. It also verifies whether the message is sent by the client or another client to place the string on the left or right side of the window.
-
-\
-
-{\small \textbf{Sending}} \\
-Very simply, uses \texttt{.send} to send a message to the server.
 
 \end{document}

@@ -10,9 +10,9 @@
     from the original design.
 
     This entails a separate thread for Game superloop in a reader-writer synchronization problem. Access to the 4 data fields (i.e. game_over, score, prey, move)
-    is protected by a critical section. This is updated with logic in the Game class, and read by the GUI class to render its state.
+    is protected by critical sections. This is updated with logic in the Game class, and read by the GUI class to update the Tkinter widgets.
 
-    Note that GUI access has been designed to have non-blocking mutex acquires for all fields other than game_over (i.e. if game has not ended).
+    Note that GUI access has been designed to have non-blocking mutex acquires for all data fields except game_over (i.e. treat as a "critical check" which cannot be skipped).
     If a certain lock from the dict cannot be acquired (i.e. data being written to when context-switch occurs), it is momentarily skipped in favor of updating other GUI components.
     This is done through scheduling an update every 100ms to behave similarly to the queue in the original program design.
 
@@ -58,7 +58,7 @@ class Gui():
             self.root.bind(f"<Key-{key}>", game.whenAnArrowKeyIsPressed)
         self.update()
 
-    def update(self):
+    def update(self) -> None:
         '''
             This method handles the state by trying to retrieve
             data from the game and accordingly taking the corresponding
@@ -93,7 +93,7 @@ class Gui():
         else:
             self.gameOver()
 
-    def gameOver(self):
+    def gameOver(self) -> None:
         """
             This method is used at the end to display a
             game over button.
@@ -118,7 +118,6 @@ class Game():
             "prey": threading.Lock(),
             "score": threading.Lock(),
         }
-        self.writecount: int = 0
 
         #starting length and location of the snake
         #note that it is a list of tuples, each being an
@@ -176,11 +175,7 @@ class Game():
             The snake coordinates list (representing its length
             and position) should be correctly updated.
         """
-        def isCaptured(snakeCoordinates) -> bool:
-            self.locks["prey"].acquire() # Critical Section (Start)
-            preyCoordinates: tuple = self.preyCoordinates # Read Prey Coordinates for Processing
-            self.locks["prey"].release() # Critical Section (End)
-
+        def isCaptured(snakeCoordinates: tuple, preyCoordinates: list) -> bool:
             captureCoordinates = (
                 snakeCoordinates[0] - SNAKE_ICON_WIDTH // 2, # x0
                 snakeCoordinates[1] - SNAKE_ICON_WIDTH // 2, # y0
@@ -218,7 +213,7 @@ class Game():
 
         self.isGameOver(NewSnakeCoordinates)
 
-        preyCaptured: bool = isCaptured(NewSnakeCoordinates)
+        preyCaptured = isCaptured(NewSnakeCoordinates, preyCoordinates = gui.canvas.coords(gui.preyIcon))
         moveSnake(isPreyCaptured = preyCaptured, newCoordinates = NewSnakeCoordinates)
 
         if preyCaptured:
@@ -250,7 +245,7 @@ class Game():
             lastY += SNAKE_ICON_WIDTH
         return (lastX, lastY)
 
-    def isGameOver(self, snakeCoordinates) -> None:
+    def isGameOver(self, snakeCoordinates: tuple) -> None:
         """
             This method checks if the game is over by
             checking if now the snake has passed any wall
