@@ -81,9 +81,9 @@ class Gui():
                 self.canvas.itemconfigure(self.score, text=f"Your Score: {game.score}")
                 game.locks["score"].release()
 
-        game.locks["game_over"].acquire()
+        game.locks["game_over"].acquire() # Critical Section (Start)
         gameNotOver: bool = game.gameNotOver # Read Game State
-        game.locks["game_over"].release()
+        game.locks["game_over"].release() # Critical Section (End)
 
         if gameNotOver:
             updateSnake()
@@ -177,9 +177,9 @@ class Game():
             and position) should be correctly updated.
         """
         def isCaptured(snakeCoordinates) -> bool:
-            self.locks["prey"].acquire()
+            self.locks["prey"].acquire() # Critical Section (Start)
             preyCoordinates: tuple = self.preyCoordinates # Read Prey Coordinates for Processing
-            self.locks["prey"].release()
+            self.locks["prey"].release() # Critical Section (End)
 
             captureCoordinates = (
                 snakeCoordinates[0] - SNAKE_ICON_WIDTH // 2, # x0
@@ -189,30 +189,30 @@ class Game():
             )
 
             isCaptured: bool = False
-            # Checks if Snake Coordinates are in Prey Coordinates (Instance where Prey could be much larger than Snake)
-            if (captureCoordinates[0] <= preyCoordinates[2] and captureCoordinates[1] <= preyCoordinates[3]) and (captureCoordinates[0] >= preyCoordinates[0] and captureCoordinates[1] >= preyCoordinates[1]): # Snake Point 0 in Prey
+            # Checks if Snake Coordinates are in Prey Coordinates (instance where Prey could be much larger than Snake)
+            if (captureCoordinates[0] <= preyCoordinates[2] and captureCoordinates[1] <= preyCoordinates[3]) and (captureCoordinates[0] >= preyCoordinates[0] and captureCoordinates[1] >= preyCoordinates[1]): # Snake Point 0 "inside" Prey
                 isCaptured = True
-            elif (captureCoordinates[2] >= preyCoordinates[0] and captureCoordinates[3] >= preyCoordinates[1]) and (captureCoordinates[2] <= preyCoordinates[2] and captureCoordinates[3] <= preyCoordinates[3]): # Snake Point 1 in Prey
+            elif (captureCoordinates[2] >= preyCoordinates[0] and captureCoordinates[3] >= preyCoordinates[1]) and (captureCoordinates[2] <= preyCoordinates[2] and captureCoordinates[3] <= preyCoordinates[3]): # Snake Point 1 "inside" Prey
                 isCaptured = True
-            # Checks if Prey Coordinates are in Snake Coordinates (Instance where Snake could be much larger than Prey)
-            elif (preyCoordinates[2] >= captureCoordinates[0] and preyCoordinates[3] >= captureCoordinates[1]) and (preyCoordinates[2] <= captureCoordinates[2] and preyCoordinates[3] <= captureCoordinates[3]): # Prey Point 0 in Snake
+            # Checks if Prey Coordinates are in Snake Coordinates (instance where Snake could be much larger than Prey)
+            elif (preyCoordinates[2] >= captureCoordinates[0] and preyCoordinates[3] >= captureCoordinates[1]) and (preyCoordinates[2] <= captureCoordinates[2] and preyCoordinates[3] <= captureCoordinates[3]): # Prey Point 0 "inside" Snake
                 isCaptured = True
-            elif (preyCoordinates[0] <= captureCoordinates[2] and preyCoordinates[1] <= captureCoordinates[3]) and (preyCoordinates[0] >= captureCoordinates[0] and preyCoordinates[1] >= captureCoordinates[1]): # Prey Point 1 in Snake
+            elif (preyCoordinates[0] <= captureCoordinates[2] and preyCoordinates[1] <= captureCoordinates[3]) and (preyCoordinates[0] >= captureCoordinates[0] and preyCoordinates[1] >= captureCoordinates[1]): # Prey Point 1 "inside" Snake
                 isCaptured = True
             return isCaptured
 
         def moveSnake(isPreyCaptured: bool, newCoordinates: tuple) -> None:
-            self.locks["move"].acquire()
+            self.locks["move"].acquire() # Critical Section (Start)
             if isPreyCaptured:
                 self.snakeCoordinates = [*self.snakeCoordinates, newCoordinates] # Append New Snake Head
             else:
                 self.snakeCoordinates = [*self.snakeCoordinates[1:], newCoordinates] # Move Snake
-            self.locks["move"].release()
+            self.locks["move"].release() # Critical Section (End)
 
         def incrementScore() -> None:
-            self.locks["score"].acquire()
+            self.locks["score"].acquire() # Critical Section (Start)
             self.score += 1
-            self.locks["score"].release()
+            self.locks["score"].release() # Critical Section (End)
 
         NewSnakeCoordinates = self.calculateNewCoordinates()
 
@@ -235,9 +235,9 @@ class Game():
             It is used by the move() method.
         """
 
-        self.locks["move"].acquire()
-        lastX, lastY = self.snakeCoordinates[-1] # Read Snake Coordinates for Processing
-        self.locks["move"].release()
+        self.locks["move"].acquire() # Critical Section (Start)
+        lastX, lastY = self.snakeCoordinates[-1] # Read Head Coordinate for Processing
+        self.locks["move"].release() # Critical Section (End)
 
         #complete the method implementation below
         if self.direction == "Left":
@@ -265,9 +265,9 @@ class Game():
         y_collision: bool = (y <= 0) or (y >= WINDOW_HEIGHT)
 
         if (x_collision) or (y_collision) or ((x, y) in self.snakeCoordinates[:-1]):
-            self.locks["game_over"].acquire()
+            self.locks["game_over"].acquire() # Critical Section (Start)
             self.gameNotOver = False
-            self.locks["game_over"].release()
+            self.locks["game_over"].release() # Critical Section (End)
         return
 
     def createNewPrey(self) -> None:
@@ -283,16 +283,19 @@ class Game():
         """
         THRESHOLD = 15
 
-        generatedCoordinates: tuple = (random.randint(THRESHOLD, WINDOW_WIDTH - THRESHOLD), random.randint(THRESHOLD, WINDOW_HEIGHT - THRESHOLD))
+        generatedCoordinates: tuple = (
+            random.randint(THRESHOLD, WINDOW_WIDTH - THRESHOLD),  # Generate X Coordinate Threshold Away From Walls
+            random.randint(THRESHOLD, WINDOW_HEIGHT - THRESHOLD)  # Generate X Coordinate Threshold Away From Walls
+        )
 
-        self.locks["prey"].acquire()
+        self.locks["prey"].acquire() # Critical Section (Start)
         self.preyCoordinates = (
             generatedCoordinates[0] - PREY_ICON_WIDTH // 2, # x0
             generatedCoordinates[1] - PREY_ICON_WIDTH // 2, # y0
             generatedCoordinates[0] + PREY_ICON_WIDTH // 2, # x1
             generatedCoordinates[1] + PREY_ICON_WIDTH // 2 # y1
         )
-        self.locks["prey"].release()
+        self.locks["prey"].release() # Critical Section (End)
 
 if __name__ == "__main__":
     #some constants for our GUI
