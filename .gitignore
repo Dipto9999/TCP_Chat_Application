@@ -1,6 +1,6 @@
 *.pyc
 *.aux
-*.fdb.latexmk
+*.fdb_latexmk
 *.fls
 *.log
 *.out
