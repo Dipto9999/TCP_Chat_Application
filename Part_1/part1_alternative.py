@@ -9,14 +9,19 @@
     Similar to Labs 5 & 6, we are using mutexes (i.e. locks in a dict) to protect read-write access to the memory instead of the `queue`
     from the original design.
 
-    This entails a separate thread for Game superloop in a reader-writer synchronization problem. Access to the 4 data fields (i.e. game_over, score, prey, move)
-    is protected by critical sections. This is updated with logic in the Game class, and read by the GUI class to update the Tkinter widgets.
+    This entails a separate thread for the `superloop()` method of the `Game` class, in a reader-writer synchronization problem.
+    Access to the 4 data fields (i.e. game_over, score, prey, move) is protected by critical sections.
+    *Note that the prey coordinates are tracked within the `Game` class as well in this redesign.*
+    This is updated with logic in the `Game` class, and read by the `Gui` class to update the Tkinter widgets.
 
-    Note that GUI access has been designed to have non-blocking mutex acquires for all data fields except game_over (i.e. treat as a "critical check" which cannot be skipped).
-    If a certain lock from the dict cannot be acquired (i.e. data being written to when context-switch occurs), it is momentarily skipped in favor of updating other GUI components.
-    This is done through scheduling an update every 100ms to behave similarly to the queue in the original program design.
+    Note that the `Gui` class read access has been designed to have non-blocking mutex acquires for all data fields except `game_over`
+    (i.e. treat this as a "critical check" which cannot be skipped). If a certain lock from the dict cannot be acquired
+    (i.e. data being written to when context-switch occurs), it is momentarily skipped in favor of updating the other `Tkinter` widgets.
+    This is done through scheduling an update every 100ms to behave similarly as in the original program design (i.e. with the `Tk.after(...)` method).
 
-    **IMPORTANT** Tkinter is NOT thread-safe. To handle GUI updates, we use the Tk.after(...) method to achieve scheduling functionality. This is the same as in the original Part 1 design.
+    **IMPORTANT** Tkinter is intended to be single-threaded and we cannot perform GUI updates outside of the main thread. This is problematic since the `Tk.mainloop()` method is blocking
+    as long as the Gui is running. (See The Python Software Foundation. (n.d.). Tkinter - Python interface to TCL/TK. Python Documentation. https://docs.python.org/3/library/tkinter.html#threading-model)
+    More is described in the supplementary .pdf report.
 """
 
 import threading
@@ -122,12 +127,12 @@ class Game():
         #starting length and location of the snake
         #note that it is a list of tuples, each being an
         # (x, y) tuple. Initially its size is 5 tuples.
+        self.score: int = 0
         self.snakeCoordinates = [(495, 55), (485, 55), (475, 55),
                                  (465, 55), (455, 55)]
         #initial direction of the snake
         self.direction = "Left"
         self.gameNotOver = True
-        self.score: int = 0
 
         self.createNewPrey() # Generate First Prey
 
