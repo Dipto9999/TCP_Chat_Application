@@ -4,22 +4,10 @@
 """
     This program implements a variety of the snake
     game (https://en.wikipedia.org/wiki/Snake_(video_game_genre))
-
-    The model of Inter-Process Communication (IPC) implemented has been changed from message passing to shared-memory.
-    Similar to Labs 5 & 6, we are using mutexes (i.e. locks in a dict) to protect read-write access to the memory instead of the `queue`
-    from the original design.
-
-    This entails a separate thread for Game superloop in a reader-writer synchronization problem. Access to the 4 data fields (i.e. game_over, score, prey, move)
-    is protected by a critical section. This is updated with logic in the Game class, and read by the GUI class to render its state.
-
-    Note that GUI access has been designed to have non-blocking mutex acquires for all fields other than game_over (i.e. if game has not ended).
-    If a certain lock from the dict cannot be acquired (i.e. data being written to when context-switch occurs), it is momentarily skipped in favor of updating other GUI components.
-    This is done through scheduling an update every 100ms to behave similarly to the queue in the original program design.
-
-    **IMPORTANT** Tkinter is NOT thread-safe. To handle GUI updates, we use the Tk.after(...) method to achieve scheduling functionality. This is the same as in the original Part 1 design.
 """
 
 import threading
+import queue        #the thread-safe queue from Python standard library
 
 from tkinter import Tk, Canvas, Button
 import random, time
@@ -56,44 +44,8 @@ class Gui():
         #binding the arrow keys to be able to control the snake
         for key in ("Left", "Right", "Up", "Down"):
             self.root.bind(f"<Key-{key}>", game.whenAnArrowKeyIsPressed)
-        self.update()
 
-    def update(self):
-        '''
-            This method handles the state by trying to retrieve
-            data from the game and accordingly taking the corresponding
-            action. These include : game_over, move, prey, score.
-            Before exiting, this method schedules to call itself after a short delay.
-
-            For general gameplay, non-blocking acquires are used to update the GUI. For these to be updated,
-            it must be confirmed that the game is not over.
-        '''
-        def updateSnake() -> None:
-            if game.locks["move"].acquire(blocking = False):
-                self.canvas.coords(self.snakeIcon, *[coord for point in game.snakeCoordinates for coord in point])
-                game.locks["move"].release()
-        def updatePrey() -> None:
-            if game.locks["prey"].acquire(blocking = False):
-                self.canvas.coords(self.preyIcon, *game.preyCoordinates)
-                game.locks["prey"].release()
-        def updateScore() -> None:
-            if game.locks["score"].acquire(blocking = False):
-                self.canvas.itemconfigure(self.score, text=f"Your Score: {game.score}")
-                game.locks["score"].release()
-
-        game.locks["game_over"].acquire() # Critical Section (Start)
-        gameNotOver: bool = game.gameNotOver # Read Game State
-        game.locks["game_over"].release() # Critical Section (End)
-
-        if gameNotOver:
-            updateSnake()
-            updatePrey()
-            updateScore()
-            self.root.after(100, self.update) # Call Function Every 100 ms
-        else:
-            self.gameOver()
-
-    def gameOver(self):
+    def gameOver(self) -> None:
         """
             This method is used at the end to display a
             game over button.
@@ -103,6 +55,43 @@ class Gui():
             command=self.root.destroy)
         self.canvas.create_window(200, 100, anchor="nw", window=gameOverButton)
 
+class QueueHandler():
+    """
+        This class implements the queue handler for the game.
+    """
+    def __init__(self):
+        self.queue = gameQueue
+        self.gui = gui
+        self.queueHandler()
+
+    def queueHandler(self) -> None:
+        '''
+            This method handles the queue by constantly retrieving
+            tasks from it and accordingly taking the corresponding
+            action.
+            A task could be: game_over, move, prey, score.
+            Each item in the queue is a dictionary whose key is
+            the task type (for example, "move") and its value is
+            the corresponding task value.
+            If the queue.empty exception happens, it schedules
+            to call itself after a short delay.
+        '''
+        try:
+            while True:
+                task = self.queue.get_nowait()
+                if "game_over" in task:
+                    gui.gameOver()
+                elif "move" in task:
+                    points = [x for point in task["move"] for x in point]
+                    gui.canvas.coords(gui.snakeIcon, *points)
+                elif "prey" in task:
+                    gui.canvas.coords(gui.preyIcon, *task["prey"])
+                elif "score" in task:
+                    gui.canvas.itemconfigure(
+                        gui.score, text=f"Your Score: {task['score']}")
+                self.queue.task_done()
+        except queue.Empty:
+            gui.root.after(100, self.queueHandler)
 class Game():
     '''
         This class implements most of the game functionalities.
@@ -112,14 +101,8 @@ class Game():
            This initializer sets the initial snake coordinate list, movement
            direction, and arranges for the first prey to be created.
         """
-        self.locks = {
-            "game_over": threading.Lock(),
-            "move": threading.Lock(),
-            "prey": threading.Lock(),
-            "score": threading.Lock(),
-        }
-        self.writecount: int = 0
-
+        self.queue = gameQueue
+        self.score = 0
         #starting length and location of the snake
         #note that it is a list of tuples, each being an
         # (x, y) tuple. Initially its size is 5 tuples.
@@ -128,9 +111,7 @@ class Game():
         #initial direction of the snake
         self.direction = "Left"
         self.gameNotOver = True
-        self.score: int = 0
-
-        self.createNewPrey() # Generate First Prey
+        self.createNewPrey()
 
     def superloop(self) -> None:
         """
@@ -141,7 +122,7 @@ class Game():
             are generated.
         """
         SPEED = 0.15     #speed of snake updates (sec)
-        while True:
+        while self.gameNotOver:
             #complete the method implementation below
             time.sleep(SPEED)
             self.move()
@@ -176,11 +157,8 @@ class Game():
             The snake coordinates list (representing its length
             and position) should be correctly updated.
         """
-        def isCaptured(snakeCoordinates) -> bool:
-            self.locks["prey"].acquire() # Critical Section (Start)
-            preyCoordinates: tuple = self.preyCoordinates # Read Prey Coordinates for Processing
-            self.locks["prey"].release() # Critical Section (End)
 
+        def isCaptured(snakeCoordinates: tuple, preyCoordinates: list) -> bool:
             captureCoordinates = (
                 snakeCoordinates[0] - SNAKE_ICON_WIDTH // 2, # x0
                 snakeCoordinates[1] - SNAKE_ICON_WIDTH // 2, # y0
@@ -201,29 +179,19 @@ class Game():
                 isCaptured = True
             return isCaptured
 
-        def moveSnake(isPreyCaptured: bool, newCoordinates: tuple) -> None:
-            self.locks["move"].acquire() # Critical Section (Start)
-            if isPreyCaptured:
-                self.snakeCoordinates = [*self.snakeCoordinates, newCoordinates] # Append New Snake Head
-            else:
-                self.snakeCoordinates = [*self.snakeCoordinates[1:], newCoordinates] # Move Snake
-            self.locks["move"].release() # Critical Section (End)
-
-        def incrementScore() -> None:
-            self.locks["score"].acquire() # Critical Section (Start)
-            self.score += 1
-            self.locks["score"].release() # Critical Section (End)
-
         NewSnakeCoordinates = self.calculateNewCoordinates()
+        #complete the method implementation below
 
-        self.isGameOver(NewSnakeCoordinates)
+        if isCaptured(snakeCoordinates = NewSnakeCoordinates, preyCoordinates = gui.canvas.coords(gui.preyIcon)): # Access from GUI:
+            self.snakeCoordinates = [*self.snakeCoordinates, NewSnakeCoordinates] # Append New Snake Head
 
-        preyCaptured: bool = isCaptured(NewSnakeCoordinates)
-        moveSnake(isPreyCaptured = preyCaptured, newCoordinates = NewSnakeCoordinates)
-
-        if preyCaptured:
+            self.score += 1
+            gameQueue.put_nowait({"score" : self.score})
             self.createNewPrey()
-            incrementScore()
+        else:
+            self.snakeCoordinates = [*self.snakeCoordinates[1:], NewSnakeCoordinates] # Move Snake
+        self.isGameOver(NewSnakeCoordinates)
+        gameQueue.put_nowait({"move" :  self.snakeCoordinates})
 
     def calculateNewCoordinates(self) -> tuple:
         """
@@ -234,11 +202,7 @@ class Game():
             head of the snake.
             It is used by the move() method.
         """
-
-        self.locks["move"].acquire() # Critical Section (Start)
-        lastX, lastY = self.snakeCoordinates[-1] # Read Head Coordinate for Processing
-        self.locks["move"].release() # Critical Section (End)
-
+        lastX, lastY = self.snakeCoordinates[-1]
         #complete the method implementation below
         if self.direction == "Left":
             lastX -= SNAKE_ICON_WIDTH
@@ -250,7 +214,7 @@ class Game():
             lastY += SNAKE_ICON_WIDTH
         return (lastX, lastY)
 
-    def isGameOver(self, snakeCoordinates) -> None:
+    def isGameOver(self, snakeCoordinates: tuple) -> None:
         """
             This method checks if the game is over by
             checking if now the snake has passed any wall
@@ -265,9 +229,8 @@ class Game():
         y_collision: bool = (y <= 0) or (y >= WINDOW_HEIGHT)
 
         if (x_collision) or (y_collision) or ((x, y) in self.snakeCoordinates[:-1]):
-            self.locks["game_over"].acquire() # Critical Section (Start)
             self.gameNotOver = False
-            self.locks["game_over"].release() # Critical Section (End)
+            gameQueue.put_nowait({"game_over" : True})
         return
 
     def createNewPrey(self) -> None:
@@ -285,30 +248,39 @@ class Game():
 
         generatedCoordinates: tuple = (
             random.randint(THRESHOLD, WINDOW_WIDTH - THRESHOLD),  # Generate X Coordinate Threshold Away From Walls
-            random.randint(THRESHOLD, WINDOW_HEIGHT - THRESHOLD)  # Generate X Coordinate Threshold Away From Walls
+            random.randint(THRESHOLD, WINDOW_HEIGHT - THRESHOLD)  # Generate Y Coordinate Threshold Away From Walls
         )
 
-        self.locks["prey"].acquire() # Critical Section (Start)
-        self.preyCoordinates = (
+        preyCoordinates: tuple = (
             generatedCoordinates[0] - PREY_ICON_WIDTH // 2, # x0
             generatedCoordinates[1] - PREY_ICON_WIDTH // 2, # y0
             generatedCoordinates[0] + PREY_ICON_WIDTH // 2, # x1
             generatedCoordinates[1] + PREY_ICON_WIDTH // 2 # y1
         )
-        self.locks["prey"].release() # Critical Section (End)
+
+        gameQueue.put_nowait({"prey" : preyCoordinates})
 
 if __name__ == "__main__":
     #some constants for our GUI
     WINDOW_WIDTH = 500
     WINDOW_HEIGHT = 300
     SNAKE_ICON_WIDTH = 15
-    PREY_ICON_WIDTH = 10 # add the specified constant PREY_ICON_WIDTH here
+    PREY_ICON_WIDTH = 10
+    #add the specified constant PREY_ICON_WIDTH here
 
-    BACKGROUND_COLOUR = "black" # you may change this colour if you wish
-    ICON_COLOUR = "blue"        # you may change this colour if you wish
+    BACKGROUND_COLOUR = "black"   #you may change this colour if you wish
+    ICON_COLOUR = "blue"        #you may change this colour if you wish
 
-    game = Game() # instantiate the game object
-    gui = Gui() # instantiate the game user interface
+    gameQueue = queue.Queue()     #instantiate a queue object using python's queue class
 
-    threading.Thread(target = game.superloop, daemon = True).start() # start a thread with the superloop of the game
-    gui.root.mainloop() # start the GUI's own event loop
+    game = Game()        #instantiate the game object
+
+    gui = Gui()    #instantiate the game user interface
+
+    QueueHandler()  #instantiate the queue handler
+
+    #start a thread with the main loop of the game
+    threading.Thread(target = game.superloop, daemon=True).start()
+
+    #start the GUI's own event loop
+    gui.root.mainloop()
