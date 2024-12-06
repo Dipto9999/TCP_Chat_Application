@@ -72,7 +72,7 @@ This was highly problematic since the program functioned as intended for initial
 However, through extensive testing we observed this consistently caused the program to crash when the snake grew at a score \textasciitilde \textit{25-26}. \\
 
 We realized why the original program design had the \texttt{QueueHandler.queueHandler()} method schedule itself with the \texttt{Tk.after(100)} method.
-From referring to the \texttt{Python} documentation, we realized that \texttt{Tkinter} widget updates must be done by the main thread.
+From referring to the \texttt{Python} documentation, we realized that \texttt{Tkinter} widget updates must be done by the main thread. \\
 \textit{(See The Python Software Foundation. (n.d.). Tkinter - Python interface to TCL/TK. Python Documentation. \href{https://docs.python.org/3/library/tkinter.html\#threading-model}{https://docs.python.org/3/library/tkinter.html\#threading-model})}
 
 \subsection{Solution}
