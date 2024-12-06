@@ -6,21 +6,23 @@
     game (https://en.wikipedia.org/wiki/Snake_(video_game_genre))
 
     The model of Inter-Process Communication (IPC) implemented has been changed from message passing to shared-memory.
-    This entails a separate thread for the `superloop()` method of the `Game` class, in a producer-consumer problem (with multiple readers and a single writer).
+    This entails a separate thread for the `superloop()` method of the `Game` class, in a producer-consumer problem (with the producer able to act as both a reader and a writer).
 
     Similar to Lab 5, we are using locks (i.e. mutexes in a dict) to protect read-write access to the memory instead of the `queue`
     from the original design. We are also indicating when there is a new value produced with semaphores (i.e. released by producer, acquired by consumer).
-    Access to the 4 data fields (i.e. game_over, score, prey, move) is protected by critical sections. A lock must be acquired for all of these shared resources,
+    Access to the "score", "prey", and "move" data fields is protected by critical sections. In other words, a mutex must be acquired for all shared resources,
     except for "game_over", for which we use a binary semaphore (i.e. value = 0 if game not over, 1 otherwise).
 
-    *Note that the prey coordinates are tracked within the `Game` class as well in this redesign.*
+    *Note that in this redesign, the prey coordinates are tracked within the `Game` class as well.*
     This is updated with logic in the `Game` class, and read by the `Gui` class to update the Tkinter widgets.
 
     Note that the `Gui` class read access has been designed to have non-blocking mutex and semaphore acquisition for all data fields
-    If a certain lock from the dict cannot be acquired (i.e. data being written to when context-switch occurs), it is momentarily skipped in favor of updating the other `Tkinter` widgets.
-    This is done through scheduling an update every 100ms to behave similarly as in the original program design (i.e. with the `Tk.after(...)` method).
+    If a certain mutex from the dict cannot be acquired (i.e. data being written to when context-switch occurs), it is momentarily skipped in favor of updating the other `Tkinter` widgets.
+    The thread behaves similarly if a semaphore cannot be acquired (i.e. no new data has been produced by the game instance).
+    This is done through scheduling an update every 100ms to behave similarly as in the original program design (i.e. with the `Tk.after(...)` method). Since the game has a speed of 150 ms,
+    these "full" semaphores eliminate the need to update the widget unless needed.
 
-    **IMPORTANT** Tkinter is intended to be single-threaded and we cannot perform GUI updates outside of the main thread. This is problematic since the `Tk.mainloop()` method is blocking
+    **IMPORTANT** Tkinter is intended to be single-threaded and we cannot perform Gui updates outside of the main thread. This is problematic since the `Tk.mainloop()` method is blocking
     as long as the gui instance is running. (See The Python Software Foundation. (n.d.). Tkinter - Python interface to TCL/TK. Python Documentation. https://docs.python.org/3/library/tkinter.html#threading-model)
     More is described in the supplementary .pdf report.
 """
@@ -243,9 +245,7 @@ class Game():
             It is used by the move() method.
         """
 
-        self.locks["move"].acquire() # Critical Section (Start)
-        lastX, lastY = self.snakeCoordinates[-1] # Read Head Coordinate for Processing
-        self.locks["move"].release() # Critical Section (End)
+        lastX, lastY = self.snakeCoordinates[-1] # Read Head Coordinate for Processing (Don't Need Critical Section)
 
         #complete the method implementation below
         if self.direction == "Left":

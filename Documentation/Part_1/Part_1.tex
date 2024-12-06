@@ -44,7 +44,7 @@ These enabled the program to update the game state via the \texttt{Game} class a
 
 \begin{figure}[H]
     \centering
-     \includegraphics[width=0.8\textwidth]{../Part_1_ClassDiagrams.jpg}
+     \includegraphics[width=1.0\textwidth]{../Part_1_ClassDiagrams.jpg}
      \caption{Part 1 - UML Relationships}
      \label{fig:Part1_ClassDiagrams}
  \end{figure}
@@ -53,7 +53,7 @@ These enabled the program to update the game state via the \texttt{Game} class a
 
 The game is played with the \texttt{superloop()} method in a \texttt{daemonic thread}, until the \texttt{game.gameNotOver} data field is read as \texttt{False}.
 A conditional loop in the \texttt{superloop()} method calls the \texttt{move()} method
-every \texttt{SPEED} \textit{ms} to perform the following actions:
+every \texttt{SPEED} \textit{s} to perform the following actions:
 
 \begin{enumerate}
     \item Determine the new head coordinates of the snake (i.e. based on current direction). (See \nameref{sec:New_Snake_Coordinates}.)
@@ -97,7 +97,7 @@ fell within the prey's boundaries (and vice-versa), as illustrated in figure \re
 
 \begin{figure}[H]
    \centering
-    \includegraphics[width=0.6\textwidth]{../PreyCapture.png}
+    \includegraphics[width=0.5\textwidth]{../PreyCapture.png}
     \caption{Prey Capture Criteria : Edge Coordinate Of Prey/Snake Must Be Contained}
     \label{fig:PreyCapture}
 \end{figure}
