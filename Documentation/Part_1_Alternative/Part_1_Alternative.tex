@@ -84,6 +84,6 @@ From referring to the \texttt{Python} documentation, we realized that \texttt{Tk
 \subsection{Solution}
 
 Instead of having the \texttt{gui.update()} method execute loop with spinlocks, we wrote it to be a conditional statement which schedules itself using the \texttt{Tk.after(100)} method.
-We implemented this with non-blocking acquires as well, such that the inability to enter a critical section wouldn't block other widget updates from occuring in the meantime.
+We implemented this with non-blocking \texttt{semaphore} acquisition as well, such that the a critical section should only be entered by the \texttt{consumer} if new data is available.
 
 \end{document}

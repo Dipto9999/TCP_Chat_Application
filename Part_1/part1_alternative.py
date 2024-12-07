@@ -16,7 +16,7 @@
     *Note that in this redesign, the prey coordinates are tracked within the `Game` class as well.*
     This is updated with logic in the `Game` class, and read by the `Gui` class to update the Tkinter widgets.
 
-    Note that the `Gui` class read access has been designed to have non-blocking mutex and semaphore acquisition for all data fields
+    Note that the `Gui` class read access has been designed to have non-blocking semaphore and blocking mutex acquisition for all data fields.
     If a certain mutex from the dict cannot be acquired (i.e. data being written to when context-switch occurs), it is momentarily skipped in favor of updating the other `Tkinter` widgets.
     The thread behaves similarly if a semaphore cannot be acquired (i.e. no new data has been produced by the game instance).
     This is done through scheduling an update every 100ms to behave similarly as in the original program design (i.e. with the `Tk.after(...)` method). Since the game has a speed of 150 ms,
@@ -73,24 +73,24 @@ class Gui():
             action. These include : game_over, move, prey, score.
             Before exiting, this method schedules to call itself after a short delay.
 
-            For general gameplay, non-blocking acquires are used to update the gui. In order for these to
-            be updated, it must be confirmed that the game is not over.
+            For general gameplay, non-blocking semaphore acquisition is used to determine whether the
+            gui should be updated. In order for these to occur, it must be confirmed that the game is not over.
         '''
         def updateSnake() -> None:
             if game.full["move"].acquire(blocking = False): # Consume New Value
-                if game.locks["move"].acquire(blocking = False): # Critical Section (Start)
-                    self.canvas.coords(self.snakeIcon, *[coord for point in game.snakeCoordinates for coord in point])
-                    game.locks["move"].release() # Critical Section (End)
+                game.locks["move"].acquire(): # Critical Section (Start)
+                self.canvas.coords(self.snakeIcon, *[coord for point in game.snakeCoordinates for coord in point])
+                game.locks["move"].release() # Critical Section (End)
         def updatePrey() -> None:
             if game.full["prey"].acquire(blocking = False): # Consume New Value
-                if game.locks["prey"].acquire(blocking = False): # Critical Section (Start)
-                    self.canvas.coords(self.preyIcon, *game.preyCoordinates)
-                    game.locks["prey"].release() # Critical Section (End)
+                game.locks["prey"].acquire(): # Critical Section (Start)
+                self.canvas.coords(self.preyIcon, *game.preyCoordinates)
+                game.locks["prey"].release() # Critical Section (End)
         def updateScore() -> None:
             if game.full["score"].acquire(blocking = False): # Consume New Value
-                if game.locks["score"].acquire(blocking = False): # Critical Section (Start)
-                    self.canvas.itemconfigure(self.score, text=f"Your Score: {game.score}")
-                    game.locks["score"].release() # Critical Section (End)
+                game.locks["score"].acquire(): # Critical Section (Start)
+                self.canvas.itemconfigure(self.score, text=f"Your Score: {game.score}")
+                game.locks["score"].release() # Critical Section (End)
 
         if game.full["game_over"].acquire(blocking = False): # Consume New Value (i.e. Game Over)
             self.gameOver()
