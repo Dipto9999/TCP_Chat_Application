@@ -46,9 +46,9 @@ We need to ensure there isn't a race condition between them. This is a problem w
 We have designed this program to have the following constraints:
 
 \begin{itemize}
-    \item $\{ \text{Readers} \} \cup \{ 0, 1 \} \hspace{5px} \text{where} \hspace{5px} \{ \text{Writers} \} \cup \{ 0 \}$
-    \item $\{ \text{Writers} \} \cup \{ 0, 1 \} \hspace{5px} \text{where} \hspace{5px} \{ \text{Readers} \} \cup \{ 0 \}$
-    \item $\{ \text{Readers} \} \cup \{ 0 \} \hspace{5px} \text{where} \hspace{5px} \{ \text{Writers} \} \cup \{ 1 \}$
+    \item $\{ \text{Readers} \} \in \{ 0, 1 \} \hspace{5px} \text{where} \hspace{5px} \{ \text{Writers} \} \in \{ 0 \}$
+    \item $\{ \text{Writers} \} \in \{ 0, 1 \} \hspace{5px} \text{where} \hspace{5px} \{ \text{Readers} \} \in \{ 0 \}$
+    \item $\{ \text{Readers} \} \in \{ 0 \} \hspace{5px} \text{where} \hspace{5px} \{ \text{Writers} \} \in \{ 1 \}$
 \end{itemize}
 
 \subsubsection{Producer Behaviour}
