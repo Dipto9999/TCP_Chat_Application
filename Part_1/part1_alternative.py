@@ -77,20 +77,20 @@ class Gui():
             be updated, it must be confirmed that the game is not over.
         '''
         def updateSnake() -> None:
-            if game.locks["move"].acquire(blocking = False):
-                if game.full["move"].acquire(blocking = False): # Consume New Value
+            if game.full["move"].acquire(blocking = False): # Consume New Value
+                if game.locks["move"].acquire(blocking = False): # Critical Section (Start)
                     self.canvas.coords(self.snakeIcon, *[coord for point in game.snakeCoordinates for coord in point])
-                game.locks["move"].release()
+                    game.locks["move"].release() # Critical Section (End)
         def updatePrey() -> None:
-            if game.locks["prey"].acquire(blocking = False):
-                if game.full["prey"].acquire(blocking = False): # Consume New Value
+            if game.full["prey"].acquire(blocking = False): # Consume New Value
+                if game.locks["prey"].acquire(blocking = False): # Critical Section (Start)
                     self.canvas.coords(self.preyIcon, *game.preyCoordinates)
-                game.locks["prey"].release()
+                    game.locks["prey"].release() # Critical Section (End)
         def updateScore() -> None:
-            if game.locks["score"].acquire(blocking = False):
-                if game.full["score"].acquire(blocking = False): # Consume New Value
+            if game.full["score"].acquire(blocking = False): # Consume New Value
+                if game.locks["score"].acquire(blocking = False): # Critical Section (Start)
                     self.canvas.itemconfigure(self.score, text=f"Your Score: {game.score}")
-                game.locks["score"].release()
+                    game.locks["score"].release() # Critical Section (End)
 
         if game.full["game_over"].acquire(blocking = False): # Consume New Value (i.e. Game Over)
             self.gameOver()
@@ -215,14 +215,14 @@ class Game():
                 self.snakeCoordinates = [*self.snakeCoordinates, newCoordinates] # Append New Snake Head
             else:
                 self.snakeCoordinates = [*self.snakeCoordinates[1:], newCoordinates] # Move Snake
-            self.full["move"].release() # Produce Value
             self.locks["move"].release() # Critical Section (End)
+            self.full["move"].release() # Produce Value
 
         def incrementScore() -> None:
             self.locks["score"].acquire() # Critical Section (Start)
             self.score += 1
-            self.full["score"].release() # Produce Value
             self.locks["score"].release() # Critical Section (End)
+            self.full["score"].release() # Produce Value
 
         NewSnakeCoordinates = self.calculateNewCoordinates()
 
@@ -302,8 +302,8 @@ class Game():
             generatedCoordinates[0] + PREY_ICON_WIDTH // 2, # x1
             generatedCoordinates[1] + PREY_ICON_WIDTH // 2 # y1
         )
-        self.full["prey"].release() # Produce Value
         self.locks["prey"].release() # Critical Section (End)
+        self.full["prey"].release() # Produce Value
 
 if __name__ == "__main__":
     #some constants for our GUI
