@@ -1,4 +1,4 @@
-# Chat Application with Concurrency
+# Chat Application with TCP Connection
 
 ## Contents
 
@@ -10,7 +10,7 @@
 
 
 ## Overview
-We developed a chat application in **Python** to implement a **Client-Server Model** via **Transmission Control Protocol (TCP)**. We developed this with the following base requirement :
+We developed a chat application in **Python** to implement a **Client-Server Model** via **Transmission Control Protocol (TCP)**. We built this to meet the following base requirement :
 
 <b>The chat service provider (i.e. server) must be able to manage multiple clients in the system without a significant drop in performance.</b>
 
