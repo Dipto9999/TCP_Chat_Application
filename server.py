@@ -95,7 +95,6 @@ class ChatServer:
                 self.socketInfo.remove(info) # Remove Stale Socket Info
             self.lock.release() # Critical Section (End)
 
-        #TODO -> Determine if Need to Close Client and Server Sockets.
         self.window.destroy()
         self.serverSocket.close() # Close Socket When Tkinter Window Closed.
 
@@ -164,7 +163,6 @@ class ChatServer:
         Default send function via TCP.
         """
 
-        #TODO -> Ask Professor about Writer/Reader Implementation
         self.lock.acquire() # Critical Section (Start)
         readInfo: list[dict] = self.socketInfo.copy() # Copy List of Sockets for Sending
         self.lock.release() # Critical Section (End)
