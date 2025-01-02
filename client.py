@@ -87,7 +87,7 @@ class ChatClient:
         try: # Try to Establish TCP Connection with Server Port
             self.clientSocket = socket.socket(family = socket.AF_INET, type = socket.SOCK_STREAM)
             self.clientSocket.connect((self.host, self.serverPort))
-        except socket.error: # Notify User When Connection Failed and Enable Ability to Reconnect.
+        except OSError: # Notify User When Connection Failed and Enable Ability to Reconnect.
             self.conn_btn.config(state = NORMAL) # Enable Button When Connection has Failed
             self.display_msg("Connection Failed!")
             self.window.title(f"{self.process_name} Disconnected From Server @PORT #{self.serverPort}!") # Display State in Window Title
@@ -132,7 +132,7 @@ class ChatClient:
         while True: # Check if New Data Received.
             try:
                 recv_stream: bytes = self.clientSocket.recv(ChatClient.MAX_BYTES) # Receive New Message Stream
-            except socket.error:
+            except OSError:
                 self.conn_btn.config(state = NORMAL)
                 break # New Data Cannot Be Received
             else:
@@ -149,7 +149,7 @@ class ChatClient:
         """
         try:
             self.clientSocket.send(msg.encode()) # Send New Message Stream
-        except socket.error:
+        except OSError:
             self.conn_btn.config(state = NORMAL) # Enable Button When Connection has Failed
             self.display_msg(msg = f"Lost Connection with Server @PORT #{self.serverPort}!", sentByMe = False)
 
