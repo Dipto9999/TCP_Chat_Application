@@ -55,4 +55,4 @@ https://github.com/user-attachments/assets/21df3b99-2e14-4370-8d2d-40f4f7108a3f
 
 ## Credit
 
-This was completed as part of the <b>CPEN 333 - Software Design</b> course in the <b>The University of British Columbia Electrical and Computer Engineering</b> undergraduate program. We received tremendous support and guidance from Dr. Farshid Agharebparast.
+This was completed as part of the <b>CPEN 333 - Software Design</b> course in <b>The University of British Columbia Electrical and Computer Engineering</b> undergraduate program. We received tremendous support and guidance from Dr. Farshid Agharebparast.
