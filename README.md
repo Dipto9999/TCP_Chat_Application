@@ -41,7 +41,7 @@ This is to ensure other threads are made aware of this client leaving the system
 We have illustrated the following **UML Sequence Diagram** to describe the high-level interactions in our program.
 
 <p align="center">
-    <img src = "Sequence_Diagram.jpg" title="Sequennce Diagram">
+    <img src = "Sequence_Diagram.jpg" title="Sequence Diagram">
 </p>
 
 
